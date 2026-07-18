@@ -7,6 +7,6 @@
  */
 
 export interface ProfessionalProfileUpdate {
-  /** @minLength 1 */
-  notificationEmail?: string;
+  /** @nullable */
+  notificationEmail?: string | null;
 }

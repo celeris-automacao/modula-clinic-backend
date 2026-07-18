@@ -65,7 +65,8 @@ router.patch("/profile", async (req: Request, res: Response): Promise<void> => {
 
   const updates: Partial<typeof usersTable.$inferInsert> = {};
   if (parsed.data.notificationEmail !== undefined) {
-    updates.notificationEmail = parsed.data.notificationEmail;
+    // null clears the column so the clinic default (PROFESSIONAL_EMAIL env var) is used
+    updates.notificationEmail = parsed.data.notificationEmail ?? null;
   }
 
   const [updated] = await db

@@ -1169,7 +1169,7 @@ components:
     ProfessionalProfileUpdate:
       type: object
       properties:
-        notificationEmail: { type: string, minLength: 1 }
+        notificationEmail: { type: ["string", "null"] }
     DashboardSummary:
       type: object
       required: [totalPatients, highRisk, mediumRisk, lowRisk, avgAdherence, logsToday]
