@@ -250,9 +250,21 @@ router.post("/patients", async (req, res): Promise<void> => {
 });
 
 router.get("/patients/:id", async (req, res): Promise<void> => {
+  if (!requireAuth(req, res)) return;
   const params = GetPatientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+  // Check whether the authenticated caller is a linked patient.
+  // If so, they may only read their own record; professionals (no linked
+  // patient row) may read any record.
+  const [linkedPatient] = await db
+    .select({ id: patientsTable.id })
+    .from(patientsTable)
+    .where(eq(patientsTable.userId, req.user!.id));
+  if (linkedPatient && linkedPatient.id !== params.data.id) {
+    res.status(403).json({ error: "Acesso negado" });
     return;
   }
   const [patient] = await db
@@ -1254,15 +1266,27 @@ router.post("/patients/:id/notify", async (req, res): Promise<void> => {
         sound: "default",
       }),
     });
-    const result = (await expoRes.json()) as { data?: { status: string } };
-    const sent = result?.data?.status === "ok";
+    // Full Expo ticket shape — log every field so failures are observable in server logs
+    const result = (await expoRes.json()) as {
+      data?: { status: "ok" | "error"; id?: string; message?: string; details?: { error?: string } };
+    };
+    const ticket = result?.data;
+    const sent = ticket?.status === "ok";
+    // Always log the complete Expo API response for observability
+    logger.info({ expoTicket: ticket, patientId: patient.id }, `Push notification para paciente ${patient.id}: ${sent ? "enviado" : "falhou"}`);
     if (sent) {
       await db
         .update(patientsTable)
         .set({ lastReminderAt: new Date() })
         .where(eq(patientsTable.id, patient.id));
+    } else if (ticket?.details?.error === "DeviceNotRegistered") {
+      // Token is stale — clear it so future calls don't waste Expo API quota
+      await db
+        .update(patientsTable)
+        .set({ pushToken: null })
+        .where(eq(patientsTable.id, patient.id));
+      logger.warn({ patientId: patient.id }, `Push token removido para paciente ${patient.id}: DeviceNotRegistered`);
     }
-    logger.info(`Push notification para paciente ${patient.id}: ${sent ? "enviado" : "token inválido"}`);
     res.json({ ok: true, sent, message: sent ? "Notificação enviada" : "Token inválido ou expirado" });
   } catch (err) {
     logger.error({ err }, "Erro ao enviar push notification");
