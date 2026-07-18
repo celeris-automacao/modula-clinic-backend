@@ -1,7 +1,25 @@
+import { spawnSync } from "child_process";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { transporter } from "./lib/email";
 import { checkAllPatientsForHighRisk } from "./routes/clinic";
+
+// Apply any pending schema changes before accepting requests so that new
+// columns added during development are always present in every environment.
+logger.info("Applying database schema (drizzle-kit push)…");
+const migrateResult = spawnSync(
+  "pnpm",
+  ["--filter", "@workspace/db", "push-force"],
+  { stdio: "inherit", encoding: "utf8" },
+);
+if (migrateResult.status !== 0) {
+  logger.error(
+    { exitCode: migrateResult.status },
+    "Database schema push failed — aborting startup",
+  );
+  process.exit(1);
+}
+logger.info("Database schema is up to date");
 
 const rawPort = process.env["PORT"];
 
