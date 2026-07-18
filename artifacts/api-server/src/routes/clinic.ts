@@ -154,6 +154,7 @@ async function patientSummary(patient: typeof patientsTable.$inferSelect) {
     protocolName: active?.treatment.protocolName ?? null,
     lastActivityAt: lastLog?.createdAt?.toISOString() ?? null,
     insightSummary: latestInsight?.summary ?? null,
+    lastReminderAt: patient.lastReminderAt?.toISOString() ?? null,
   };
 }
 
@@ -1064,12 +1065,20 @@ router.post("/patients/:id/notify", async (req, res): Promise<void> => {
     return;
   }
   const [patient] = await db
-    .select({ id: patientsTable.id, name: patientsTable.name, pushToken: patientsTable.pushToken })
+    .select({ id: patientsTable.id, name: patientsTable.name, pushToken: patientsTable.pushToken, lastReminderAt: patientsTable.lastReminderAt })
     .from(patientsTable)
     .where(eq(patientsTable.id, params.data.id));
   if (!patient) {
     res.status(404).json({ error: "Paciente não encontrado" });
     return;
+  }
+  // Rate-limit: only one reminder per patient per day
+  if (patient.lastReminderAt) {
+    const sentDate = patient.lastReminderAt.toISOString().slice(0, 10);
+    if (sentDate === todayStr()) {
+      res.status(429).json({ error: "Lembrete já enviado hoje" });
+      return;
+    }
   }
   if (!patient.pushToken) {
     res.status(404).json({ error: "Paciente sem token de push registrado" });
@@ -1089,6 +1098,12 @@ router.post("/patients/:id/notify", async (req, res): Promise<void> => {
     });
     const result = (await expoRes.json()) as { data?: { status: string } };
     const sent = result?.data?.status === "ok";
+    if (sent) {
+      await db
+        .update(patientsTable)
+        .set({ lastReminderAt: new Date() })
+        .where(eq(patientsTable.id, patient.id));
+    }
     logger.info(`Push notification para paciente ${patient.id}: ${sent ? "enviado" : "token inválido"}`);
     res.json({ ok: true, sent, message: sent ? "Notificação enviada" : "Token inválido ou expirado" });
   } catch (err) {

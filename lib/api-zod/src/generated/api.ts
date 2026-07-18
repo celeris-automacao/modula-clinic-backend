@@ -35,7 +35,8 @@ export const ListPatientsResponseItem = zod.object({
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
   "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
-  "lastActivityAt": zod.string().nullish()
+  "lastActivityAt": zod.string().nullish(),
+  "lastReminderAt": zod.string().nullish().describe('ISO timestamp of the last push reminder sent to this patient, if any')
 })
 export const ListPatientsResponse = zod.array(ListPatientsResponseItem)
 
@@ -70,7 +71,8 @@ export const CreatePatientResponse = zod.object({
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
   "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
-  "lastActivityAt": zod.string().nullish()
+  "lastActivityAt": zod.string().nullish(),
+  "lastReminderAt": zod.string().nullish().describe('ISO timestamp of the last push reminder sent to this patient, if any')
 })
 
 
@@ -97,7 +99,8 @@ export const GetMyPatientResponse = zod.object({
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
   "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
-  "lastActivityAt": zod.string().nullish()
+  "lastActivityAt": zod.string().nullish(),
+  "lastReminderAt": zod.string().nullish().describe('ISO timestamp of the last push reminder sent to this patient, if any')
 })
 
 
@@ -121,7 +124,8 @@ export const GetPatientResponse = zod.object({
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
   "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
-  "lastActivityAt": zod.string().nullish()
+  "lastActivityAt": zod.string().nullish(),
+  "lastReminderAt": zod.string().nullish().describe('ISO timestamp of the last push reminder sent to this patient, if any')
 })
 
 
@@ -152,7 +156,8 @@ export const LinkPatientAccountResponse = zod.object({
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
   "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
-  "lastActivityAt": zod.string().nullish()
+  "lastActivityAt": zod.string().nullish(),
+  "lastReminderAt": zod.string().nullish().describe('ISO timestamp of the last push reminder sent to this patient, if any')
 })
 
 

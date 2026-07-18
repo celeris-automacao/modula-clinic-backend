@@ -14,6 +14,7 @@ export const patientsTable = pgTable("patients", {
   // Links this patient record to a Replit Auth user (nullable — not all patients have accounts yet)
   userId: varchar("user_id").unique(),
   pushToken: text("push_token"),
+  lastReminderAt: timestamp("last_reminder_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

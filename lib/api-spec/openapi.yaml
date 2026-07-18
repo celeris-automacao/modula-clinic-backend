@@ -386,6 +386,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
+        "429":
+          description: Reminder already sent today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /patients/{id}/insight/generate:
     post:
       operationId: generateInsight
@@ -1019,6 +1025,7 @@ components:
         protocolName: { type: ["string", "null"] }
         insightSummary: { type: ["string", "null"], description: "BR-081: insight resumido para o card do dashboard" }
         lastActivityAt: { type: ["string", "null"] }
+        lastReminderAt: { type: ["string", "null"], description: "ISO timestamp of the last push reminder sent to this patient, if any" }
     PatientInput:
       type: object
       required: [name, goal]
