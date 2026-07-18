@@ -13,6 +13,7 @@
     "migrate": "node --import tsx/esm ./src/migrate.ts",
     "seed": "node --import tsx/esm ./src/seed.ts",
     "test:seed": "node --import tsx/esm ./src/seed.integration.ts",
+    "test:drift": "node --import tsx/esm ./src/check-drift.integration.ts",
     "test:migrate": "node --import tsx/esm ./src/migrate.integration.ts"
   },
   "dependencies": {
