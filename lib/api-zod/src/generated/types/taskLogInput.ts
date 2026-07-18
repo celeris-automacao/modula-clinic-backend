@@ -12,6 +12,8 @@ export interface TaskLogInput {
   note?: string;
   /** Optional numeric value e.g. weight */
   valueNumber?: number;
-  /** Base64 data URL (data:image/...) — required for photo-category tasks */
+  /** Base64 data URL (data:image/...) — deprecated, use photoObjectPath */
   photoDataUrl?: string;
+  /** Object path returned by /storage/uploads/request-url (e.g. /objects/uploads/uuid) */
+  photoObjectPath?: string;
 }

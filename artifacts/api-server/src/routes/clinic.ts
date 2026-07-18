@@ -41,6 +41,7 @@ import {
   todayStr,
 } from "../lib/adherence";
 import { sendHighRiskAlertEmail } from "../lib/email";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 
 /**
  * Returns the distinct categories of mandatory tasks that have never been
@@ -588,6 +589,7 @@ router.get("/patients/:id/tasks/today", async (req, res): Promise<void> => {
       logDate: taskLogsTable.logDate,
       note: taskLogsTable.note,
       photoData: taskLogsTable.photoData,
+      photoUrl: taskLogsTable.photoUrl,
       valueNumber: taskLogsTable.valueNumber,
     })
     .from(taskLogsTable)
@@ -600,11 +602,11 @@ router.get("/patients/:id/tasks/today", async (req, res): Promise<void> => {
     );
 
   // Build separate maps: daily tasks check today only, weekly tasks check whole week
-  type LogInfo = { note: string | null; photoData: string | null; valueNumber: number | null };
+  type LogInfo = { note: string | null; photoData: string | null; photoUrl: string | null; valueNumber: number | null };
   const dailyDone = new Map<number, LogInfo>();
   const weeklyDone = new Map<number, LogInfo>();
   for (const log of logs) {
-    const info = { note: log.note, photoData: log.photoData, valueNumber: log.valueNumber };
+    const info = { note: log.note, photoData: log.photoData, photoUrl: log.photoUrl, valueNumber: log.valueNumber };
     if (log.logDate === today) dailyDone.set(log.taskId, info);
     weeklyDone.set(log.taskId, info);
   }
@@ -623,7 +625,10 @@ router.get("/patients/:id/tasks/today", async (req, res): Promise<void> => {
       completedToday: done,
       note: info?.note ?? null,
       valueNumber: info?.valueNumber ?? null,
-      photoDataUrl: info?.photoData ?? null,
+      // New object-storage URL (served via /api/storage/objects/...)
+      photoUrl: info?.photoUrl ? `/api/storage${info.photoUrl}` : null,
+      // Legacy base64 fallback for records created before object storage migration
+      photoDataUrl: info?.photoUrl ? null : (info?.photoData ?? null),
     };
   });
 
@@ -971,9 +976,9 @@ router.post("/task-logs", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { taskId, patientId, note, valueNumber, photoDataUrl } = parsed.data;
+  const { taskId, patientId, note, valueNumber, photoDataUrl, photoObjectPath } = parsed.data;
 
-  // STORY-012: validação de foto — apenas data URLs de imagem, tamanho limitado
+  // STORY-012: validação de foto — aceita object path (novo) ou data URL base64 (legado)
   if (photoDataUrl !== undefined) {
     if (!/^data:image\/(jpeg|jpg|png|webp|heic|heif);base64,/.test(photoDataUrl)) {
       res.status(400).json({ error: "Foto inválida: esperado data URL base64 de imagem" });
@@ -981,6 +986,20 @@ router.post("/task-logs", async (req, res): Promise<void> => {
     }
     if (photoDataUrl.length > 6 * 1024 * 1024) {
       res.status(400).json({ error: "Foto muito grande (máx. ~4MB)" });
+      return;
+    }
+  }
+  if (photoObjectPath !== undefined) {
+    if (!photoObjectPath.startsWith("/objects/")) {
+      res.status(400).json({ error: "photoObjectPath inválido: deve começar com /objects/" });
+      return;
+    }
+    // Verify the object was actually uploaded to GCS (prevents fake/arbitrary paths)
+    const storageService = new ObjectStorageService();
+    try {
+      await storageService.getObjectEntityFile(photoObjectPath);
+    } catch {
+      res.status(400).json({ error: "Foto não encontrada no storage — faça o upload antes de registrar" });
       return;
     }
   }
@@ -1013,8 +1032,8 @@ router.post("/task-logs", async (req, res): Promise<void> => {
 
   const task = active.tasks.find((t) => t.id === taskId)!;
 
-  // STORY-012: tarefas de foto exigem a foto anexada
-  if (task.category === "photo" && !photoDataUrl) {
+  // STORY-012: tarefas de foto exigem a foto anexada (objectPath novo ou dataUrl legado)
+  if (task.category === "photo" && !photoObjectPath && !photoDataUrl) {
     res.status(400).json({ error: "Tarefas de foto exigem uma foto anexada" });
     return;
   }
@@ -1061,7 +1080,8 @@ router.post("/task-logs", async (req, res): Promise<void> => {
       logDate: today,
       note: note ?? null,
       valueNumber: valueNumber ?? null,
-      photoData: photoDataUrl ?? null,
+      photoData: photoObjectPath ? null : (photoDataUrl ?? null),
+      photoUrl: photoObjectPath ?? null,
     })
     .returning();
 

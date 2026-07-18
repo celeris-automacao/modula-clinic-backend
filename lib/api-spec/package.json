@@ -9,7 +9,7 @@
     "check:codegen": "pnpm run lint:spec && orval --config ./orval.config.ts && (git -C ../.. checkout -- lib/api-client-react/src/index.ts lib/api-zod/src/index.ts 2>/dev/null; git -C ../.. diff --exit-code lib/api-zod/src/generated lib/api-client-react/src/generated) || (echo 'ERROR: Generated client files are out of sync with openapi.yaml. Run pnpm --filter @workspace/api-spec codegen to regenerate.' && exit 1)"
   },
   "devDependencies": {
-    "@redocly/cli": "^1.34.0",
+    "@redocly/cli": "^1.34.17",
     "orval": "^8.21.0"
   }
 }

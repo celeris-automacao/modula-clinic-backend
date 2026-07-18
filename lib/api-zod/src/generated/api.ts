@@ -303,7 +303,8 @@ export const GetTodayTasksResponseItem = zod.object({
   "completedToday": zod.boolean(),
   "note": zod.string().nullish(),
   "valueNumber": zod.number().nullish().describe('Logged numeric value (sleep hours, mood scale, etc.)'),
-  "photoDataUrl": zod.string().nullish().describe('Base64 data URL of the logged photo (photo-category tasks only)')
+  "photoDataUrl": zod.string().nullish().describe('Base64 data URL of the logged photo — legacy fallback for old records'),
+  "photoUrl": zod.string().nullish().describe('Serving path for the uploaded photo (e.g. \/api\/storage\/objects\/uploads\/uuid)')
 })
 export const GetTodayTasksResponse = zod.array(GetTodayTasksResponseItem)
 
@@ -567,7 +568,8 @@ export const CreateTaskLogBody = zod.object({
   "patientId": zod.number(),
   "note": zod.string().optional(),
   "valueNumber": zod.number().optional().describe('Optional numeric value e.g. weight'),
-  "photoDataUrl": zod.string().optional().describe('Base64 data URL (data:image\/...) — required for photo-category tasks')
+  "photoDataUrl": zod.string().optional().describe('Base64 data URL (data:image\/...) — deprecated, use photoObjectPath'),
+  "photoObjectPath": zod.string().optional().describe('Object path returned by \/storage\/uploads\/request-url (e.g. \/objects\/uploads\/uuid)')
 })
 
 export const CreateTaskLogResponse = zod.object({
@@ -587,6 +589,48 @@ export const CreateTaskLogResponse = zod.object({
   "computedAt": zod.string()
 })
 })
+
+
+/**
+ * Returns a presigned GCS URL for direct upload. The client sends JSON
+ * metadata here, then uploads the file directly to the returned URL.
+ * @summary Request a presigned URL for file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1).describe('Original file name.'),
+  "size": zod.number().min(1).describe('File size in bytes.'),
+  "contentType": zod.string().min(1).describe('MIME type of the file (e.g. image\/jpeg).')
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().describe('Presigned GCS URL for PUT upload.'),
+  "objectPath": zod.string().describe('Normalized object path (e.g. \/objects\/uploads\/uuid). Store this in your database.'),
+  "metadata": zod.object({
+  "name": zod.string().min(1).describe('Original file name.'),
+  "size": zod.number().min(1).describe('File size in bytes.'),
+  "contentType": zod.string().min(1).describe('MIME type of the file (e.g. image\/jpeg).')
+}).optional()
+})
+
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
+})
+
+export const GetStorageObjectResponse = zod.unknown()
 
 
 /**

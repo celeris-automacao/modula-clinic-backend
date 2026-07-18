@@ -25,8 +25,13 @@ export interface TodayTask {
      */
   valueNumber?: number | null;
   /**
-     * Base64 data URL of the logged photo (photo-category tasks only)
+     * Base64 data URL of the logged photo — legacy fallback for old records
      * @nullable
      */
   photoDataUrl?: string | null;
+  /**
+     * Serving path for the uploaded photo (e.g. /api/storage/objects/uploads/uuid)
+     * @nullable
+     */
+  photoUrl?: string | null;
 }

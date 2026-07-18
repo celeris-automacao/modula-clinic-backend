@@ -64,3 +64,5 @@ export * from './treatmentInput';
 export * from './treatmentPublishResult';
 export * from './treatmentStatusResult';
 export * from './updateGoalWeightInput';
+export * from './uploadUrlRequest';
+export * from './uploadUrlResponse';

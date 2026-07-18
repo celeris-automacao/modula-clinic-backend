@@ -29,8 +29,8 @@ app.use(
 );
 app.use(cors({ credentials: true, origin: true }));
 app.use(cookieParser());
-// Limite maior para logs de tarefas de foto (imagem base64 comprimida)
-app.use(express.json({ limit: "8mb" }));
+// Fotos agora vão direto para object storage; corpo JSON pode ser pequeno novamente
+app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(authMiddleware);
 

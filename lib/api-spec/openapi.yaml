@@ -18,6 +18,8 @@ tags:
   - name: dashboard
   - name: Auth
     description: Browser and mobile authentication endpoints.
+  - name: Storage
+    description: Object storage upload and serving endpoints.
   - name: alerts
 paths:
   /healthz:
@@ -683,6 +685,70 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      description: |
+        Returns a presigned GCS URL for direct upload. The client sends JSON
+        metadata here, then uploads the file directly to the returned URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessage'
+        '500':
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessage'
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Object content streamed.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessage'
+        '500':
+          description: Failed to serve object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessage'
   /auth/user:
     get:
       tags: [Auth]
@@ -1041,6 +1107,34 @@ components:
       properties:
         status: { type: string }
       required: [status]
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Original file name.
+        size:
+          type: integer
+          minimum: 1
+          description: File size in bytes.
+        contentType:
+          type: string
+          minLength: 1
+          description: MIME type of the file (e.g. image/jpeg).
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          description: Presigned GCS URL for PUT upload.
+        objectPath:
+          type: string
+          description: Normalized object path (e.g. /objects/uploads/uuid). Store this in your database.
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'
     ApiMessage:
       type: object
       properties:
@@ -1245,7 +1339,10 @@ components:
           description: "Logged numeric value (sleep hours, mood scale, etc.)"
         photoDataUrl:
           type: ["string", "null"]
-          description: "Base64 data URL of the logged photo (photo-category tasks only)"
+          description: "Base64 data URL of the logged photo — legacy fallback for old records"
+        photoUrl:
+          type: ["string", "null"]
+          description: "Serving path for the uploaded photo (e.g. /api/storage/objects/uploads/uuid)"
     TaskLogInput:
       type: object
       required: [taskId, patientId]
@@ -1256,7 +1353,10 @@ components:
         valueNumber: { type: number, description: "Optional numeric value e.g. weight" }
         photoDataUrl:
           type: string
-          description: "Base64 data URL (data:image/...) — required for photo-category tasks"
+          description: "Base64 data URL (data:image/...) — deprecated, use photoObjectPath"
+        photoObjectPath:
+          type: string
+          description: "Object path returned by /storage/uploads/request-url (e.g. /objects/uploads/uuid)"
     TaskLogResult:
       type: object
       required: [logId, adherence]
