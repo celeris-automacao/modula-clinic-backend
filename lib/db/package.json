@@ -11,7 +11,7 @@
     "generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "check:migration": "node --import tsx/esm ./src/check-migration-drift.ts",
     "migrate": "node --import tsx/esm ./src/migrate.ts",
-    "seed": "node --import tsx/esm ./src/seed.ts",
+    "seed": "node --import tsx/esm ./src/seed.ts && node --import tsx/esm ./src/seed.demo.ts",
     "test:seed": "node --import tsx/esm ./src/seed.integration.ts",
     "test:drift": "node --import tsx/esm ./src/check-drift.integration.ts",
     "test:migrate": "node --import tsx/esm ./src/migrate.integration.ts"

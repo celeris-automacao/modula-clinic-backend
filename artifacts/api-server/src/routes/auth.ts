@@ -5,6 +5,7 @@ import {
   LogoutMobileSessionResponse,
 } from '@workspace/api-zod';
 import { db, usersTable } from '@workspace/db';
+import { eq } from 'drizzle-orm';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import * as oidc from 'openid-client';
 
@@ -97,10 +98,21 @@ function getSafeErrorMetadata(error: unknown) {
   };
 }
 
-async function upsertUser(claims: Record<string, unknown>) {
+/**
+ * Upsert a user from OIDC claims.
+ *
+ * Strategy when e-mail conflicts with a different id:
+ *   Keep the existing row's id (preserves foreign keys like patients.user_id)
+ *   and update its profile fields to reflect the current Replit identity.
+ * Otherwise: standard insert-or-update-by-id.
+ */
+export async function upsertUser(claims: Record<string, unknown>) {
+  const claimsId = claims.sub as string;
+  const claimsEmail = (claims.email as string) || null;
+
   const userData = {
-    id: claims.sub as string,
-    email: (claims.email as string) || null,
+    id: claimsId,
+    email: claimsEmail,
     firstName: (claims.first_name as string) || null,
     lastName: (claims.last_name as string) || null,
     profileImageUrl: (claims.profile_image_url || claims.picture) as
@@ -108,13 +120,43 @@ async function upsertUser(claims: Record<string, unknown>) {
       | null,
   };
 
+  // If the token carries an e-mail, check whether a row already exists for
+  // that e-mail under a *different* id (e.g. one auto-generated before the
+  // patient first logged in). If so, update that row in-place so that any
+  // foreign-key references (patients.user_id) keep resolving to the same row.
+  if (claimsEmail) {
+    const [existingByEmail] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, claimsEmail))
+      .limit(1);
+
+    if (existingByEmail && existingByEmail.id !== claimsId) {
+      const [updated] = await db
+        .update(usersTable)
+        .set({
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(usersTable.id, existingByEmail.id))
+        .returning();
+      return updated;
+    }
+  }
+
+  // Standard path: insert new user or update profile for a returning Replit id.
   const [user] = await db
     .insert(usersTable)
     .values(userData)
     .onConflictDoUpdate({
       target: usersTable.id,
       set: {
-        ...userData,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
         updatedAt: new Date(),
       },
     })
@@ -204,7 +246,20 @@ router.get('/callback', async (req: Request, res: Response) => {
     return;
   }
 
-  const dbUser = await upsertUser(claims as unknown as Record<string, unknown>);
+  let dbUser: Awaited<ReturnType<typeof upsertUser>>;
+  try {
+    dbUser = await upsertUser(claims as unknown as Record<string, unknown>);
+  } catch (err) {
+    req.log?.error?.({ err }, 'Failed to upsert user during auth callback');
+    res
+      .status(500)
+      .send(
+        '<!doctype html><html><body><h2>Login failed</h2>' +
+          '<p>We could not complete your sign-in. Please try again or contact support.</p>' +
+          '<a href="/api/login">Try again</a></body></html>',
+      );
+    return;
+  }
 
   const now = Math.floor(Date.now() / 1000);
   const sessionData: SessionData = {
