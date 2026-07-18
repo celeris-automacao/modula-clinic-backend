@@ -1,0 +1,2 @@
+# Temporary directories created by the migration-drift check script
+.drizzle-drift-*/

@@ -1001,7 +1001,7 @@ components:
       required: [error]
     Patient:
       type: object
-      required: [id, name, goal, startWeightKg, riskLevel, adherenceScore, trend, hasActiveTreatment]
+      required: [id, name, goal, startWeightKg, riskLevel, adherenceScore, trend, hasActiveTreatment, hasPushToken]
       properties:
         id: { type: integer }
         name: { type: string }
@@ -1016,6 +1016,7 @@ components:
         riskLevel: { type: string, enum: [high, medium, low, none] }
         trend: { type: string, enum: [improving, stable, declining, unknown] }
         hasActiveTreatment: { type: boolean }
+        hasPushToken: { type: boolean, description: "Whether the patient has a registered push notification token" }
         protocolName: { type: ["string", "null"] }
         insightSummary: { type: ["string", "null"], description: "BR-081: insight resumido para o card do dashboard" }
         lastActivityAt: { type: ["string", "null"] }

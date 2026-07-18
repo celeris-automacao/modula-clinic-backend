@@ -32,6 +32,8 @@ export interface Patient {
   riskLevel: PatientRiskLevel;
   trend: PatientTrend;
   hasActiveTreatment: boolean;
+  /** Whether the patient has a registered push notification token */
+  hasPushToken: boolean;
   /** @nullable */
   protocolName?: string | null;
   /**

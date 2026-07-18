@@ -151,6 +151,7 @@ async function patientSummary(patient: typeof patientsTable.$inferSelect) {
     riskLevel: adherence.riskLevel,
     trend: adherence.trend,
     hasActiveTreatment: !!active,
+    hasPushToken: !!patient.pushToken,
     protocolName: active?.treatment.protocolName ?? null,
     lastActivityAt: lastLog?.createdAt?.toISOString() ?? null,
     insightSummary: latestInsight?.summary ?? null,
