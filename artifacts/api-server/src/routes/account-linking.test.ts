@@ -281,4 +281,86 @@ describe("PATCH /api/patients/:id – account linking authorization", () => {
     // The patient record must NOT have been updated
     expect(mockUpdateBuilder.set).not.toHaveBeenCalled();
   });
+
+  it("returns 409 when the userId is already linked to another patient (unique constraint)", async () => {
+    currentUser = { id: "prof-user-id" };
+    linkedPatientId = null;
+
+    // DB sequence: professional check → no linked patient; fetch target patient → exists;
+    // user existence check → user found; update → throws unique_violation
+    let call = 0;
+    const patientRow = {
+      id: 2,
+      name: "João",
+      goal: "lose weight",
+      age: 40,
+      startWeightKg: 90,
+      currentWeightKg: 89,
+      goalWeightKg: 75,
+      nextAppointment: null,
+      userId: null,
+    };
+    vi.mocked(db.select).mockImplementation(() => {
+      const idx = call++;
+      const rows: unknown[] =
+        idx === 0
+          ? [] // requireProfessional → professional
+          : idx === 1
+            ? [patientRow] // fetch target patient
+            : [{ id: "taken-user-id" }]; // user existence check → user found
+      return makeSelectBuilder(rows) as any;
+    });
+
+    const pgUniqueError = Object.assign(new Error("duplicate key"), { code: "23505" });
+    mockUpdateBuilder.returning.mockRejectedValueOnce(pgUniqueError);
+
+    const app = buildApp();
+    const res = await request(app)
+      .patch("/api/patients/2")
+      .send({ userId: "taken-user-id" });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ error: expect.any(String) });
+  });
+
+  it("returns 200 when unlinking a patient account (userId set to null)", async () => {
+    currentUser = { id: "prof-user-id" };
+    linkedPatientId = null;
+
+    const patientRow = {
+      id: 3,
+      name: "Ana",
+      goal: "lose weight",
+      age: 28,
+      startWeightKg: 70,
+      currentWeightKg: 68,
+      goalWeightKg: 58,
+      nextAppointment: null,
+      userId: "existing-user-id",
+    };
+
+    // Unlink path: no user-existence check is performed when userId is null
+    let call = 0;
+    vi.mocked(db.select).mockImplementation(() => {
+      const idx = call++;
+      const rows: unknown[] =
+        idx === 0
+          ? [] // requireProfessional → professional
+          : idx === 1
+            ? [patientRow] // fetch target patient
+            : []; // patientSummary extra selects
+      return makeSelectBuilder(rows) as any;
+    });
+
+    mockUpdateBuilder.returning.mockResolvedValueOnce([{ ...patientRow, userId: null }]);
+
+    const app = buildApp();
+    const res = await request(app)
+      .patch("/api/patients/3")
+      .send({ userId: null });
+
+    expect(res.status).toBe(200);
+    // The update must have been called (unlink actually executed)
+    expect(mockUpdateBuilder.set).toHaveBeenCalled();
+  });
 });

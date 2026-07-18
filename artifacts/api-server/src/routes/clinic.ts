@@ -296,12 +296,28 @@ router.patch("/patients/:id", async (req, res): Promise<void> => {
       return;
     }
   }
-  const [updated] = await db
-    .update(patientsTable)
-    .set({ userId: body.data.userId ?? null })
-    .where(eq(patientsTable.id, params.data.id))
-    .returning();
-  res.json(await patientSummary(updated!));
+  try {
+    const [updated] = await db
+      .update(patientsTable)
+      .set({ userId: body.data.userId ?? null })
+      .where(eq(patientsTable.id, params.data.id))
+      .returning();
+    res.json(await patientSummary(updated!));
+  } catch (err: unknown) {
+    // PostgreSQL unique_violation → userId already linked to another patient
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "23505"
+    ) {
+      res
+        .status(409)
+        .json({ error: "Este usuário já está vinculado a outro paciente" });
+      return;
+    }
+    throw err;
+  }
 });
 
 router.get("/patients/:id/adherence", async (req, res): Promise<void> => {
@@ -486,6 +502,8 @@ router.get("/patients/:id/treatments", async (req, res): Promise<void> => {
 });
 
 router.get("/patients/:id/treatment", async (req, res): Promise<void> => {
+  // BR-060: dados do tratamento ativo contêm informações sensíveis; requer autenticação.
+  if (!requireAuth(req, res)) return;
   const params = GetActiveTreatmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
