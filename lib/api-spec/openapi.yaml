@@ -786,6 +786,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Alert"
+        "400":
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
         "401":
           description: Not authenticated
           content:

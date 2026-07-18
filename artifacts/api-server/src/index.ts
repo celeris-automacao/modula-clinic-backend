@@ -21,6 +21,7 @@ if (migrateResult.status !== 0) {
 }
 logger.info("Database migrations applied successfully");
 
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
