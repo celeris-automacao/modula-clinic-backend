@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784393535633,
+      "tag": "0000_wise_energizer",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784393535634,
+      "tag": "001_add_notification_email",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784410000000,
+      "tag": "002_add_push_token",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784396637122,
+      "tag": "0003_equal_ink",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1753000000000,
+      "tag": "004_add_task_logs_photo_url",
+      "breakpoints": true
+    }
+  ]
+}
