@@ -1073,6 +1073,17 @@ router.post("/patients/:id/push-token", async (req, res): Promise<void> => {
 
 // Send a push reminder to a patient's device via the Expo Push API
 // Requires an authenticated professional session (patients are denied).
+/**
+ * Returns true when the per-patient daily rate-limit should block a new reminder.
+ * A reminder is blocked when `lastReminderAt` falls on today's UTC date.
+ * Exported so tests can assert against the real production predicate.
+ */
+export function isReminderRateLimited(lastReminderAt: Date | null | undefined): boolean {
+  if (!lastReminderAt) return false;
+  const sentDate = lastReminderAt.toISOString().slice(0, 10);
+  return sentDate === todayStr();
+}
+
 router.post("/patients/:id/notify", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Autenticação necessária" });
@@ -1102,12 +1113,9 @@ router.post("/patients/:id/notify", async (req, res): Promise<void> => {
     return;
   }
   // Rate-limit: only one reminder per patient per day
-  if (patient.lastReminderAt) {
-    const sentDate = patient.lastReminderAt.toISOString().slice(0, 10);
-    if (sentDate === todayStr()) {
-      res.status(429).json({ error: "Lembrete já enviado hoje" });
-      return;
-    }
+  if (isReminderRateLimited(patient.lastReminderAt)) {
+    res.status(429).json({ error: "Lembrete já enviado hoje" });
+    return;
   }
   if (!patient.pushToken) {
     res.status(404).json({ error: "Paciente sem token de push registrado" });
