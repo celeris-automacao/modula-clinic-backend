@@ -9,4 +9,8 @@
 export interface TreatmentStatusResult {
   id: number;
   status: string;
+  /** Number of mandatory tasks that were never logged for this treatment (audit field) */
+  missingMandatoryTasks?: number;
+  /** Categories of mandatory tasks that were never logged (e.g. ['weight','medication']) */
+  missingMandatoryCategories?: string[];
 }

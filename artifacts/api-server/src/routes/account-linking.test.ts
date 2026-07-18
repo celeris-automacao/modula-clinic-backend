@@ -172,12 +172,40 @@ function setupProfessionalDbSequence() {
         ? [] // requireProfessional → no linked patient (caller is a professional)
         : idx === 1
           ? [patientRow] // fetch target patient
-          : []; // lastLog, latestInsight selects
+          : idx === 2
+            ? [{ id: "new-user-id" }] // user existence check → user found
+            : []; // lastLog, latestInsight selects
     return makeSelectBuilder(rows) as any;
   });
 
   // update().set().where().returning() → return updated patient row
   mockUpdateBuilder.returning.mockResolvedValue([{ ...patientRow, userId: "new-user-id" }]);
+}
+
+function setupNonExistentUserDbSequence() {
+  let call = 0;
+  const patientRow = {
+    id: 1,
+    name: "Maria",
+    goal: "lose weight",
+    age: 30,
+    startWeightKg: 80,
+    currentWeightKg: 78,
+    goalWeightKg: 65,
+    nextAppointment: null,
+    userId: null,
+  };
+
+  vi.mocked(db.select).mockImplementation(() => {
+    const idx = call++;
+    const rows: unknown[] =
+      idx === 0
+        ? [] // requireProfessional → no linked patient (caller is a professional)
+        : idx === 1
+          ? [patientRow] // fetch target patient
+          : []; // user existence check → user NOT found
+    return makeSelectBuilder(rows) as any;
+  });
 }
 
 function setupPatientDbSequence() {
@@ -236,5 +264,21 @@ describe("PATCH /api/patients/:id – account linking authorization", () => {
       .send({ userId: "new-patient-user-id" });
 
     expect(res.status).toBe(200);
+  });
+
+  it("returns 404 when the userId does not exist in the users table", async () => {
+    currentUser = { id: "prof-user-id" };
+    linkedPatientId = null; // caller is a professional
+    setupNonExistentUserDbSequence();
+
+    const app = buildApp();
+    const res = await request(app)
+      .patch("/api/patients/1")
+      .send({ userId: "ghost-user-id" });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({ error: expect.any(String) });
+    // The patient record must NOT have been updated
+    expect(mockUpdateBuilder.set).not.toHaveBeenCalled();
   });
 });

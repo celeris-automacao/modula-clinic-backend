@@ -55,6 +55,7 @@ export * from './taskLogResult';
 export * from './todayTask';
 export * from './todayTaskCategory';
 export * from './todayTaskFrequency';
+export * from './treatmentCloseBlockedError';
 export * from './treatmentCreated';
 export * from './treatmentDetail';
 export * from './treatmentHistoryItem';

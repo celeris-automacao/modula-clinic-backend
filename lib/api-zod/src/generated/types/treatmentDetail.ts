@@ -17,5 +17,7 @@ export interface TreatmentDetail {
   durationWeeks: number;
   /** True when at least one task log exists for this treatment (BR-050) */
   hasActivity: boolean;
+  /** Categories of mandatory tasks that have never been logged for this treatment */
+  missingMandatoryCategories?: string[];
   tasks: ProtocolTask[];
 }

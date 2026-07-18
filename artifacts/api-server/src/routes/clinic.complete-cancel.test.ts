@@ -61,11 +61,11 @@ const {
 
 vi.mock("@workspace/db", () => ({
   db: mockDb,
-  treatmentsTable: { id: "id", status: "status", patientId: "patientId" },
+  treatmentsTable: { id: "id", status: "status", patientId: "patientId", protocolId: "protocolId" },
   patientsTable: { id: "id", userId: "userId", name: "name" },
   protocolsTable: {},
-  protocolTasksTable: {},
-  taskLogsTable: { treatmentId: "treatmentId", patientId: "patientId", logDate: "logDate" },
+  protocolTasksTable: { id: "id", protocolId: "protocolId", treatmentId: "treatmentId", category: "category", mandatory: "mandatory" },
+  taskLogsTable: { treatmentId: "treatmentId", patientId: "patientId", logDate: "logDate", taskId: "taskId" },
   insightsTable: {},
   alertsTable: {},
 }));
@@ -176,13 +176,57 @@ describe("POST /treatments/:id/complete", () => {
     mockSelectWhere
       .mockResolvedValueOnce([])              // requireProfessional: no linked patient
       .mockResolvedValueOnce([activeTreatment]) // treatment lookup → active
-      .mockResolvedValueOnce([{ count: 3 }]);   // log count → has logs
+      .mockResolvedValueOnce([{ count: 3 }])    // log count → has logs
+      .mockResolvedValueOnce([]);               // mandatory tasks → none
     mockUpdateReturning.mockResolvedValue([{ id: 42, status: "completed" }]);
 
     const res = await request(app).post("/treatments/42/complete");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: 42, status: "completed" });
+    expect(res.body).toEqual({ id: 42, status: "completed", missingMandatoryTasks: 0, missingMandatoryCategories: [] });
+  });
+
+  it("returns 409 when mandatory tasks were never logged (BR-089)", async () => {
+    mockSelectWhere
+      .mockResolvedValueOnce([])              // requireProfessional: no linked patient
+      .mockResolvedValueOnce([activeTreatment]) // treatment lookup → active
+      .mockResolvedValueOnce([{ count: 3 }])    // log count → has logs
+      .mockResolvedValueOnce([               // mandatory tasks → weight + medication
+        { id: 10, category: "weight" },
+        { id: 11, category: "medication" },
+      ])
+      .mockResolvedValueOnce([{ taskId: 99 }]); // logged IDs → neither mandatory task logged
+
+    const res = await request(app).post("/treatments/42/complete");
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({
+      error: expect.stringContaining("obrigatórias"),
+      missingMandatoryTasks: 2,
+      missingMandatoryCategories: expect.arrayContaining(["weight", "medication"]),
+    });
+  });
+
+  it("counts each missing task ID separately even when two share the same category", async () => {
+    // Two mandatory "weight" tasks (e.g. morning + evening) — count=2 but only 1 unique category.
+    mockSelectWhere
+      .mockResolvedValueOnce([])              // requireProfessional: no linked patient
+      .mockResolvedValueOnce([activeTreatment]) // treatment lookup → active
+      .mockResolvedValueOnce([{ count: 5 }])    // log count → has logs
+      .mockResolvedValueOnce([               // mandatory tasks → two weight tasks + one medication
+        { id: 10, category: "weight" },
+        { id: 11, category: "weight" },
+        { id: 12, category: "medication" },
+      ])
+      .mockResolvedValueOnce([{ taskId: 12 }]); // task 12 (medication) was logged; 10+11 were not
+
+    const res = await request(app).post("/treatments/42/complete");
+
+    expect(res.status).toBe(409);
+    // missingMandatoryTasks must be 2 (two task IDs), not 1 (one deduplicated category)
+    expect(res.body.missingMandatoryTasks).toBe(2);
+    // missingMandatoryCategories is deduplicated for display
+    expect(res.body.missingMandatoryCategories).toEqual(["weight"]);
   });
 });
 
@@ -231,12 +275,33 @@ describe("POST /treatments/:id/cancel", () => {
     mockSelectWhere
       .mockResolvedValueOnce([])              // requireProfessional: no linked patient
       .mockResolvedValueOnce([activeTreatment]) // treatment lookup → active
-      .mockResolvedValueOnce([{ count: 3 }]);   // log count → has logs
+      .mockResolvedValueOnce([{ count: 3 }])    // log count → has logs
+      .mockResolvedValueOnce([]);               // mandatory tasks → none
     mockUpdateReturning.mockResolvedValue([{ id: 42, status: "cancelled" }]);
 
     const res = await request(app).post("/treatments/42/cancel");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: 42, status: "cancelled" });
+    expect(res.body).toEqual({ id: 42, status: "cancelled", missingMandatoryTasks: 0, missingMandatoryCategories: [] });
+  });
+
+  it("returns 409 when mandatory tasks were never logged (BR-089)", async () => {
+    mockSelectWhere
+      .mockResolvedValueOnce([])              // requireProfessional: no linked patient
+      .mockResolvedValueOnce([activeTreatment]) // treatment lookup → active
+      .mockResolvedValueOnce([{ count: 3 }])    // log count → has logs
+      .mockResolvedValueOnce([               // mandatory tasks → weight
+        { id: 10, category: "weight" },
+      ])
+      .mockResolvedValueOnce([]);               // logged IDs → mandatory task never logged
+
+    const res = await request(app).post("/treatments/42/cancel");
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({
+      error: expect.stringContaining("obrigatórias"),
+      missingMandatoryTasks: 1,
+      missingMandatoryCategories: ["weight"],
+    });
   });
 });

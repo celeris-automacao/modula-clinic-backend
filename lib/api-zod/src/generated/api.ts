@@ -241,6 +241,7 @@ export const GetActiveTreatmentResponse = zod.object({
   "startedAt": zod.string(),
   "durationWeeks": zod.number(),
   "hasActivity": zod.boolean().describe('True when at least one task log exists for this treatment (BR-050)'),
+  "missingMandatoryCategories": zod.array(zod.string()).optional().describe('Categories of mandatory tasks that have never been logged for this treatment'),
   "tasks": zod.array(zod.object({
   "id": zod.number(),
   "title": zod.string(),
@@ -504,7 +505,9 @@ export const CompleteTreatmentParams = zod.object({
 
 export const CompleteTreatmentResponse = zod.object({
   "id": zod.number(),
-  "status": zod.string()
+  "status": zod.string(),
+  "missingMandatoryTasks": zod.number().optional().describe('Number of mandatory tasks that were never logged for this treatment (audit field)'),
+  "missingMandatoryCategories": zod.array(zod.string()).optional().describe('Categories of mandatory tasks that were never logged (e.g. [\'weight\',\'medication\'])')
 })
 
 
@@ -517,7 +520,9 @@ export const CancelTreatmentParams = zod.object({
 
 export const CancelTreatmentResponse = zod.object({
   "id": zod.number(),
-  "status": zod.string()
+  "status": zod.string(),
+  "missingMandatoryTasks": zod.number().optional().describe('Number of mandatory tasks that were never logged for this treatment (audit field)'),
+  "missingMandatoryCategories": zod.array(zod.string()).optional().describe('Categories of mandatory tasks that were never logged (e.g. [\'weight\',\'medication\'])')
 })
 
 

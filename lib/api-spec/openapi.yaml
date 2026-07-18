@@ -559,11 +559,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
         "409":
-          description: Treatment is not active
+          description: "Treatment cannot be closed: not active, no activity, or mandatory tasks never logged"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiMessage"
+                $ref: "#/components/schemas/TreatmentCloseBlockedError"
   /treatments/{id}/cancel:
     post:
       operationId: cancelTreatment
@@ -589,11 +589,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
         "409":
-          description: Treatment is not active
+          description: "Treatment cannot be cancelled: not active, no activity, or mandatory tasks never logged"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiMessage"
+                $ref: "#/components/schemas/TreatmentCloseBlockedError"
   /task-logs:
     post:
       operationId: createTaskLog
@@ -1120,12 +1120,31 @@ components:
         protocolName: { type: string }
         startedAt: { type: string }
         durationWeeks: { type: integer }
+    TreatmentCloseBlockedError:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        missingMandatoryTasks:
+          type: integer
+          description: "Number of mandatory task IDs that were never logged (not deduplicated by category)"
+        missingMandatoryCategories:
+          type: array
+          items: { type: string }
+          description: "Deduplicated categories of mandatory tasks that were never logged"
     TreatmentStatusResult:
       type: object
       required: [id, status]
       properties:
         id: { type: integer }
         status: { type: string }
+        missingMandatoryTasks:
+          type: integer
+          description: "Number of mandatory tasks that were never logged for this treatment (audit field)"
+        missingMandatoryCategories:
+          type: array
+          items: { type: string }
+          description: "Categories of mandatory tasks that were never logged (e.g. ['weight','medication'])"
     TreatmentDetail:
       type: object
       required: [id, patientId, protocolId, protocolName, status, startedAt, durationWeeks, tasks, hasActivity]
@@ -1141,6 +1160,10 @@ components:
         hasActivity:
           type: boolean
           description: "True when at least one task log exists for this treatment (BR-050)"
+        missingMandatoryCategories:
+          type: array
+          items: { type: string }
+          description: "Categories of mandatory tasks that have never been logged for this treatment"
         tasks:
           type: array
           items:

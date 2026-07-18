@@ -42,6 +42,44 @@ import {
 } from "../lib/adherence";
 import { sendHighRiskAlertEmail } from "../lib/email";
 
+/**
+ * Returns the distinct categories of mandatory tasks that have never been
+ * logged for the given treatment. Accepts the already-loaded list of mandatory
+ * tasks so the caller can avoid an extra DB round-trip when the task list is
+ * already available.
+ *
+ * @param treatmentId  The treatment ID to check logs against.
+ * @param mandatoryTasks  Mandatory tasks from the treatment (id + category).
+ */
+interface MissingMandatoryResult {
+  /** Count of individual mandatory task IDs that were never logged (not deduplicated). */
+  missingMandatoryTasks: number;
+  /** Deduplicated list of categories for display (multiple tasks can share a category). */
+  missingMandatoryCategories: string[];
+}
+
+async function computeMissingMandatory(
+  treatmentId: number,
+  mandatoryTasks: { id: number; category: string }[],
+): Promise<MissingMandatoryResult> {
+  if (mandatoryTasks.length === 0) {
+    return { missingMandatoryTasks: 0, missingMandatoryCategories: [] };
+  }
+
+  const loggedRows = await db
+    .select({ taskId: taskLogsTable.taskId })
+    .from(taskLogsTable)
+    .where(eq(taskLogsTable.treatmentId, treatmentId));
+
+  const loggedIds = new Set(loggedRows.map((r) => r.taskId));
+  const missingTasks = mandatoryTasks.filter((t) => !loggedIds.has(t.id));
+  // Count actual missing task IDs (not deduplicated) for the audit field.
+  const missingMandatoryTasks = missingTasks.length;
+  // Deduplicate categories for the display field.
+  const missingMandatoryCategories = [...new Set(missingTasks.map((t) => t.category))];
+  return { missingMandatoryTasks, missingMandatoryCategories };
+}
+
 /** Returns YYYY-MM-DD for N days ago */
 function daysAgoStr(n: number): string {
   const d = new Date();
@@ -248,6 +286,16 @@ router.patch("/patients/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Paciente não encontrado" });
     return;
   }
+  if (body.data.userId != null) {
+    const [user] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.id, body.data.userId));
+    if (!user) {
+      res.status(404).json({ error: "Usuário não encontrado" });
+      return;
+    }
+  }
   const [updated] = await db
     .update(patientsTable)
     .set({ userId: body.data.userId ?? null })
@@ -453,6 +501,14 @@ router.get("/patients/:id/treatment", async (req, res): Promise<void> => {
     .select({ count: sql<number>`count(*)::int` })
     .from(taskLogsTable)
     .where(eq(taskLogsTable.treatmentId, active.treatment.id));
+
+  // Surface which mandatory task categories have never been logged so the UI
+  // can warn the professional before they close the treatment.
+  const { missingMandatoryCategories } = await computeMissingMandatory(
+    active.treatment.id,
+    active.tasks.filter((t) => t.mandatory),
+  );
+
   res.json({
     id: active.treatment.id,
     patientId: active.treatment.patientId,
@@ -462,6 +518,7 @@ router.get("/patients/:id/treatment", async (req, res): Promise<void> => {
     startedAt: active.treatment.startedAt.toISOString(),
     durationWeeks: active.treatment.durationWeeks,
     hasActivity: logCount > 0,
+    missingMandatoryCategories,
     tasks: active.tasks,
   });
 });
@@ -782,12 +839,35 @@ router.post("/treatments/:id/complete", async (req, res): Promise<void> => {
     });
     return;
   }
+  // Audit: surface mandatory tasks never logged so the caller can record them
+  const mandatoryTasks = await db
+    .select({ id: protocolTasksTable.id, category: protocolTasksTable.category })
+    .from(protocolTasksTable)
+    .where(
+      and(
+        eq(protocolTasksTable.protocolId, treatment.protocolId),
+        or(isNull(protocolTasksTable.treatmentId), eq(protocolTasksTable.treatmentId, treatment.id)),
+        eq(protocolTasksTable.mandatory, true),
+      ),
+    );
+  const { missingMandatoryTasks, missingMandatoryCategories } = await computeMissingMandatory(
+    treatment.id,
+    mandatoryTasks,
+  );
+  if (missingMandatoryTasks > 0) {
+    res.status(409).json({
+      error: "Existem tarefas obrigatórias sem nenhum registro neste tratamento",
+      missingMandatoryTasks,
+      missingMandatoryCategories,
+    });
+    return;
+  }
   const [updated] = await db
     .update(treatmentsTable)
     .set({ status: "completed" })
     .where(eq(treatmentsTable.id, treatment.id))
     .returning();
-  res.json({ id: updated!.id, status: updated!.status });
+  res.json({ id: updated!.id, status: updated!.status, missingMandatoryTasks: 0, missingMandatoryCategories: [] });
 });
 
 // BR-021: Active → Cancelled
@@ -821,12 +901,35 @@ router.post("/treatments/:id/cancel", async (req, res): Promise<void> => {
     });
     return;
   }
+  // Audit: surface mandatory tasks never logged so the caller can record them
+  const mandatoryTasks = await db
+    .select({ id: protocolTasksTable.id, category: protocolTasksTable.category })
+    .from(protocolTasksTable)
+    .where(
+      and(
+        eq(protocolTasksTable.protocolId, treatment.protocolId),
+        or(isNull(protocolTasksTable.treatmentId), eq(protocolTasksTable.treatmentId, treatment.id)),
+        eq(protocolTasksTable.mandatory, true),
+      ),
+    );
+  const { missingMandatoryTasks, missingMandatoryCategories } = await computeMissingMandatory(
+    treatment.id,
+    mandatoryTasks,
+  );
+  if (missingMandatoryTasks > 0) {
+    res.status(409).json({
+      error: "Existem tarefas obrigatórias sem nenhum registro neste tratamento",
+      missingMandatoryTasks,
+      missingMandatoryCategories,
+    });
+    return;
+  }
   const [updated] = await db
     .update(treatmentsTable)
     .set({ status: "cancelled" })
     .where(eq(treatmentsTable.id, treatment.id))
     .returning();
-  res.json({ id: updated!.id, status: updated!.status });
+  res.json({ id: updated!.id, status: updated!.status, missingMandatoryTasks: 0, missingMandatoryCategories: [] });
 });
 
 router.post("/task-logs", async (req, res): Promise<void> => {
