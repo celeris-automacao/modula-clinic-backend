@@ -379,10 +379,7 @@ router.get("/patients/:id/measurements", async (req, res): Promise<void> => {
       and(
         eq(taskLogsTable.patientId, params.data.id),
         eq(treatmentsTable.status, "active"),
-        or(
-          eq(protocolTasksTable.category, "weight"),
-          eq(protocolTasksTable.category, "measurement"),
-        ),
+        eq(protocolTasksTable.category, "weight"),
         gte(taskLogsTable.logDate, since),
         isNotNull(taskLogsTable.valueNumber),
       ),
