@@ -7,7 +7,7 @@
  *
  * Steps:
  *   1. Creates a throwaway database on the same Postgres server
- *   2. Applies the schema with drizzle-kit push --force
+ *   2. Applies the schema via drizzle migrations
  *   3. Runs the seed script twice (fresh + idempotence check)
  *   4. Asserts protocols/tasks are readable and categories are valid
  *   5. Drops the throwaway database (also on failure)
@@ -57,12 +57,12 @@ async function main() {
 
   let exitCode = 0;
   try {
-    // 2. Apply schema to the empty database
-    console.log("🧪  Applying schema (drizzle-kit push --force)…");
+    // 2. Apply schema to the empty database via migrations
+    console.log("🧪  Applying migrations…");
     execFileSync(
       "pnpm",
-      ["exec", "drizzle-kit", "push", "--force", "--config", "./drizzle.config.ts"],
-      { cwd: PKG_ROOT, env: { ...process.env, DATABASE_URL: testUrl.href }, stdio: "inherit" },
+      ["--filter", "@workspace/db", "migrate"],
+      { env: { ...process.env, DATABASE_URL: testUrl.href }, stdio: "inherit" },
     );
 
     // 3. Run the seed script — twice, to also verify idempotence

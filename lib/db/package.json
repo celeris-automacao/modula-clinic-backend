@@ -8,8 +8,8 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "migrate": "node --import tsx/esm ./src/migrate.ts",
     "seed": "node --import tsx/esm ./src/seed.ts",
     "test:seed": "node --import tsx/esm ./src/seed.integration.ts"
   },

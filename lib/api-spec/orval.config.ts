@@ -13,10 +13,12 @@ const titleTransformer: InputTransformerFn = (config) => {
   return config;
 };
 
+const openapiYaml = path.resolve(__dirname, "./openapi.yaml");
+
 export default defineConfig({
   "api-client-react": {
     input: {
-      target: "./openapi.yaml",
+      target: openapiYaml,
       override: {
         transformer: titleTransformer,
       },
@@ -42,7 +44,7 @@ export default defineConfig({
   },
   zod: {
     input: {
-      target: "./openapi.yaml",
+      target: openapiYaml,
       override: {
         transformer: titleTransformer,
       },
