@@ -752,6 +752,8 @@ paths:
       operationId: listAlerts
       tags: [alerts]
       summary: List all high-risk alerts (professionals only)
+      security:
+        - sessionCookie: []
       responses:
         "200":
           description: Alerts, newest first
@@ -778,6 +780,8 @@ paths:
       operationId: checkAlerts
       tags: [alerts]
       summary: Scan all patients and create high-risk alerts (professionals only)
+      security:
+        - sessionCookie: []
       responses:
         "200":
           description: Alert check result
@@ -802,6 +806,8 @@ paths:
       operationId: markAlertRead
       tags: [alerts]
       summary: Mark an alert as read (professionals only)
+      security:
+        - sessionCookie: []
       parameters:
         - name: id
           in: path
