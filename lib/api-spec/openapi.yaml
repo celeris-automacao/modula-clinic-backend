@@ -1,0 +1,508 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Modula Clinic — Smart Treatment Journey API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: patients
+  - name: protocols
+  - name: treatments
+  - name: tasks
+  - name: adherence
+  - name: insights
+  - name: dashboard
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: List patients with adherence summary, ordered by risk
+      responses:
+        "200":
+          description: Patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+  /patients/{id}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /patients/{id}/adherence:
+    get:
+      operationId: getPatientAdherence
+      tags: [adherence]
+      summary: Adherence radar detail computed by the Adherence Engine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Adherence detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdherenceDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /patients/{id}/progress:
+    get:
+      operationId: getPatientProgress
+      tags: [adherence]
+      summary: Daily completion series for the active treatment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Daily progress points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProgressPoint"
+  /patients/{id}/treatment:
+    get:
+      operationId: getActiveTreatment
+      tags: [treatments]
+      summary: Active treatment with its tasks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Active treatment or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentDetail"
+        "404":
+          description: No active treatment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /patients/{id}/tasks/today:
+    get:
+      operationId: getTodayTasks
+      tags: [tasks]
+      summary: Patient's tasks for today with completion status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Today's tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TodayTask"
+  /patients/{id}/insight:
+    get:
+      operationId: getLatestInsight
+      tags: [insights]
+      summary: Latest AI insight for the patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Latest insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Insight"
+        "404":
+          description: No insight yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /patients/{id}/insight/generate:
+    post:
+      operationId: generateInsight
+      tags: [insights]
+      summary: Generate a fresh AI insight from the Adherence Engine output
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "201":
+          description: Generated insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Insight"
+        "404":
+          description: Patient not found or no active treatment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /protocols:
+    get:
+      operationId: listProtocols
+      tags: [protocols]
+      summary: Protocol library
+      responses:
+        "200":
+          description: Protocols
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Protocol"
+    post:
+      operationId: createProtocol
+      tags: [protocols]
+      summary: Create a custom protocol with tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProtocolInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Protocol"
+  /protocols/{id}:
+    get:
+      operationId: getProtocol
+      tags: [protocols]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Protocol
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Protocol"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /treatments:
+    post:
+      operationId: createTreatment
+      tags: [treatments]
+      summary: Apply a protocol to a patient (generates the patient's tasks)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TreatmentInput"
+      responses:
+        "201":
+          description: Created treatment with tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentDetail"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /task-logs:
+    post:
+      operationId: createTaskLog
+      tags: [tasks]
+      summary: Patient registers an activity (recomputes adherence)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskLogInput"
+      responses:
+        "201":
+          description: Created log with fresh adherence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskLogResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Clinic-wide adherence overview
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status: { type: string }
+      required: [status]
+    ApiMessage:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+    Patient:
+      type: object
+      required: [id, name, goal, startWeightKg, riskLevel, adherenceScore, trend, hasActiveTreatment]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        goal: { type: string }
+        age: { type: ["integer", "null"] }
+        startWeightKg: { type: ["number", "null"] }
+        currentWeightKg: { type: ["number", "null"] }
+        nextAppointment: { type: ["string", "null"] }
+        adherenceScore: { type: integer, description: "0-100 from Adherence Engine" }
+        riskLevel: { type: string, enum: [high, medium, low, none] }
+        trend: { type: string, enum: [improving, stable, declining, unknown] }
+        hasActiveTreatment: { type: boolean }
+        protocolName: { type: ["string", "null"] }
+        lastActivityAt: { type: ["string", "null"] }
+    PatientInput:
+      type: object
+      required: [name, goal]
+      properties:
+        name: { type: string, minLength: 1 }
+        goal: { type: string, minLength: 1 }
+        age: { type: integer }
+        startWeightKg: { type: number }
+        currentWeightKg: { type: number }
+        nextAppointment: { type: string }
+    ProtocolTask:
+      type: object
+      required: [id, title, category, frequency]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        category: { type: string, enum: [nutrition, exercise, hydration, measurement, habit, medication] }
+        frequency: { type: string, enum: [daily, weekly] }
+    ProtocolTaskInput:
+      type: object
+      required: [title, category, frequency]
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string }
+        category: { type: string, enum: [nutrition, exercise, hydration, measurement, habit, medication] }
+        frequency: { type: string, enum: [daily, weekly] }
+    Protocol:
+      type: object
+      required: [id, name, description, durationWeeks, isPreset, tasks]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        durationWeeks: { type: integer }
+        isPreset: { type: boolean }
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProtocolTask"
+    ProtocolInput:
+      type: object
+      required: [name, description, durationWeeks, tasks]
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        durationWeeks: { type: integer, minimum: 1 }
+        tasks:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ProtocolTaskInput"
+    TreatmentInput:
+      type: object
+      required: [patientId, protocolId]
+      properties:
+        patientId: { type: integer }
+        protocolId: { type: integer }
+        extraTasks:
+          type: array
+          description: Tarefas personalizadas adicionadas além do protocolo
+          items:
+            $ref: "#/components/schemas/ProtocolTaskInput"
+    TreatmentDetail:
+      type: object
+      required: [id, patientId, protocolId, protocolName, startedAt, durationWeeks, tasks]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        protocolId: { type: integer }
+        protocolName: { type: string }
+        startedAt: { type: string }
+        durationWeeks: { type: integer }
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProtocolTask"
+    TodayTask:
+      type: object
+      required: [taskId, title, category, frequency, completedToday]
+      properties:
+        taskId: { type: integer }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        category: { type: string, enum: [nutrition, exercise, hydration, measurement, habit, medication] }
+        frequency: { type: string, enum: [daily, weekly] }
+        completedToday: { type: boolean }
+        note: { type: ["string", "null"] }
+    TaskLogInput:
+      type: object
+      required: [taskId, patientId]
+      properties:
+        taskId: { type: integer }
+        patientId: { type: integer }
+        note: { type: string }
+        valueNumber: { type: number, description: "Optional numeric value e.g. weight" }
+    TaskLogResult:
+      type: object
+      required: [logId, adherence]
+      properties:
+        logId: { type: integer }
+        adherence:
+          $ref: "#/components/schemas/AdherenceDetail"
+    AdherenceDetail:
+      type: object
+      required: [patientId, score, riskLevel, trend, currentStreakDays, missedLast3Days, weeklyCompletionPct, categoryBreakdown, computedAt]
+      properties:
+        patientId: { type: integer }
+        score: { type: integer, description: "0-100" }
+        riskLevel: { type: string, enum: [high, medium, low, none] }
+        trend: { type: string, enum: [improving, stable, declining, unknown] }
+        currentStreakDays: { type: integer }
+        missedLast3Days: { type: integer }
+        weeklyCompletionPct: { type: integer }
+        categoryBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryScore"
+        computedAt: { type: string }
+    CategoryScore:
+      type: object
+      required: [category, completionPct]
+      properties:
+        category: { type: string }
+        completionPct: { type: integer }
+    ProgressPoint:
+      type: object
+      required: [date, completed, expected, completionPct]
+      properties:
+        date: { type: string }
+        completed: { type: integer }
+        expected: { type: integer }
+        completionPct: { type: integer }
+    Insight:
+      type: object
+      required: [id, patientId, summary, suggestedAction, riskLevel, createdAt]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        summary: { type: string, description: "Natural-language explanation of adherence" }
+        suggestedAction: { type: string }
+        riskLevel: { type: string, enum: [high, medium, low, none] }
+        createdAt: { type: string }
+    DashboardSummary:
+      type: object
+      required: [totalPatients, highRisk, mediumRisk, lowRisk, avgAdherence, logsToday]
+      properties:
+        totalPatients: { type: integer }
+        highRisk: { type: integer }
+        mediumRisk: { type: integer }
+        lowRisk: { type: integer }
+        avgAdherence: { type: integer }
+        logsToday: { type: integer }
