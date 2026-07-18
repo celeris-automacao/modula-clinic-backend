@@ -30,6 +30,9 @@ import {
   LinkPatientAccountParams,
   LinkPatientAccountBody,
   GetPatientTreatmentsParams,
+  RegisterPushTokenBody,
+  RegisterPushTokenParams,
+  NotifyPatientParams,
 } from "@workspace/api-zod";
 import {
   computeAdherence,
@@ -665,7 +668,7 @@ router.post("/treatments", async (req, res): Promise<void> => {
         description: t.description ?? null,
         category: t.category,
         frequency: t.frequency,
-        mandatory: t.mandatory ?? false,
+        mandatory: (t as Record<string, unknown>).mandatory === true,
       })),
     );
   }
@@ -966,6 +969,132 @@ router.get("/alerts", async (req, res): Promise<void> => {
       createdAt: a.createdAt.toISOString(),
     })),
   );
+});
+
+// Store an Expo push token for a patient's device
+/**
+ * Checks whether a given user (identified by userId) is allowed to update the
+ * push token for the patient identified by targetPatientId.
+ *
+ * Rules:
+ * - If the user has a linked patient record AND that patient's id does not
+ *   match targetPatientId → not allowed (patient trying to update another).
+ * - If the user has no linked patient record (professional) → always allowed.
+ * - If the user IS the linked patient for targetPatientId → allowed.
+ *
+ * Exported for unit testing.
+ */
+export async function canUpdatePushToken(
+  callerUserId: string,
+  targetPatientId: number,
+): Promise<{ allowed: boolean; reason?: string }> {
+  const [linkedPatient] = await db
+    .select({ id: patientsTable.id })
+    .from(patientsTable)
+    .where(eq(patientsTable.userId, callerUserId));
+  if (linkedPatient && linkedPatient.id !== targetPatientId) {
+    return { allowed: false, reason: "Você só pode registrar o token do seu próprio dispositivo" };
+  }
+  return { allowed: true };
+}
+
+// Store an Expo push token for a patient's device.
+// Requires an authenticated session. Ownership rules:
+//   - Patients (their userId is linked to a patient record) may only update
+//     their own record; 403 if the path :id differs from their linked patient.
+//   - Professionals (no linked patient record) may update any patient's token.
+router.post("/patients/:id/push-token", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Autenticação necessária" });
+    return;
+  }
+  const params = RegisterPushTokenParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const body = RegisterPushTokenBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  // Ownership check: delegate to the exported helper (also used in tests).
+  const ownership = await canUpdatePushToken(req.user.id, params.data.id);
+  if (!ownership.allowed) {
+    res.status(403).json({ error: ownership.reason });
+    return;
+  }
+
+  const [patient] = await db
+    .select({ id: patientsTable.id })
+    .from(patientsTable)
+    .where(eq(patientsTable.id, params.data.id));
+  if (!patient) {
+    res.status(404).json({ error: "Paciente não encontrado" });
+    return;
+  }
+  await db
+    .update(patientsTable)
+    .set({ pushToken: body.data.token })
+    .where(eq(patientsTable.id, params.data.id));
+  res.json({ message: "Token registrado" });
+});
+
+// Send a push reminder to a patient's device via the Expo Push API
+// Requires an authenticated professional session (patients are denied).
+router.post("/patients/:id/notify", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Autenticação necessária" });
+    return;
+  }
+  // Deny if the caller is a patient (their auth ID is linked to a patient record)
+  const [callerPatient] = await db
+    .select({ id: patientsTable.id })
+    .from(patientsTable)
+    .where(eq(patientsTable.userId, req.user.id))
+    .limit(1);
+  if (callerPatient) {
+    res.status(403).json({ error: "Apenas profissionais podem enviar lembretes" });
+    return;
+  }
+  const params = NotifyPatientParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [patient] = await db
+    .select({ id: patientsTable.id, name: patientsTable.name, pushToken: patientsTable.pushToken })
+    .from(patientsTable)
+    .where(eq(patientsTable.id, params.data.id));
+  if (!patient) {
+    res.status(404).json({ error: "Paciente não encontrado" });
+    return;
+  }
+  if (!patient.pushToken) {
+    res.status(404).json({ error: "Paciente sem token de push registrado" });
+    return;
+  }
+  try {
+    const expoRes = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        to: patient.pushToken,
+        title: "Lembrete do seu acompanhamento",
+        body: "Seu profissional enviou um lembrete. Registre suas tarefas de hoje!",
+        data: { deepLink: "today" },
+        sound: "default",
+      }),
+    });
+    const result = (await expoRes.json()) as { data?: { status: string } };
+    const sent = result?.data?.status === "ok";
+    logger.info(`Push notification para paciente ${patient.id}: ${sent ? "enviado" : "token inválido"}`);
+    res.json({ ok: true, sent, message: sent ? "Notificação enviada" : "Token inválido ou expirado" });
+  } catch (err) {
+    logger.error({ err }, "Erro ao enviar push notification");
+    res.status(500).json({ error: "Falha ao enviar notificação" });
+  }
 });
 
 router.patch("/alerts/:id/read", async (req, res): Promise<void> => {

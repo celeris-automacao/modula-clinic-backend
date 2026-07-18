@@ -314,6 +314,36 @@ export const GetLatestInsightResponse = zod.object({
 
 
 /**
+ * @summary Register an Expo push token for a patient's device
+ */
+export const RegisterPushTokenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RegisterPushTokenBody = zod.object({
+  "token": zod.string().describe('Expo push token from the patient\'s device')
+})
+
+export const RegisterPushTokenResponse = zod.object({
+  "error": zod.string()
+})
+
+
+/**
+ * @summary Send a push reminder to a patient's device (professional only)
+ */
+export const NotifyPatientParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const NotifyPatientResponse = zod.object({
+  "ok": zod.boolean(),
+  "sent": zod.boolean(),
+  "message": zod.string().optional()
+})
+
+
+/**
  * @summary Generate a fresh AI insight from the Adherence Engine output (BR-070–BR-073, BR-093)
  */
 export const GenerateInsightParams = zod.object({

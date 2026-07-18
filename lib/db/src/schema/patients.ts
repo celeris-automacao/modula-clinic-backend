@@ -13,6 +13,7 @@ export const patientsTable = pgTable("patients", {
   nextAppointment: date("next_appointment", { mode: "string" }),
   // Links this patient record to a Replit Auth user (nullable — not all patients have accounts yet)
   userId: varchar("user_id").unique(),
+  pushToken: text("push_token"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

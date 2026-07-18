@@ -330,6 +330,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
+  /patients/{id}/push-token:
+    post:
+      operationId: registerPushToken
+      tags: [patients]
+      summary: Register an Expo push token for a patient's device
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenInput"
+      responses:
+        "200":
+          description: Token stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "404":
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /patients/{id}/notify:
+    post:
+      operationId: notifyPatient
+      tags: [patients]
+      summary: Send a push reminder to a patient's device (professional only)
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Notification dispatched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotifyResult"
+        "404":
+          description: Patient not found or no push token registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /patients/{id}/insight/generate:
     post:
       operationId: generateInsight
@@ -1234,3 +1290,15 @@ components:
         riskLevel: { type: string }
         readAt: { type: ["string", "null"] }
         createdAt: { type: string }
+    PushTokenInput:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, description: "Expo push token from the patient's device" }
+    NotifyResult:
+      type: object
+      required: [ok, sent]
+      properties:
+        ok: { type: boolean }
+        sent: { type: boolean }
+        message: { type: string }

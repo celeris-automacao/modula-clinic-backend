@@ -9,5 +9,8 @@
     "types": ["node"]
   },
   "include": ["src"],
-  "exclude": ["src/seed.integration.ts"]
+  "exclude": ["src/seed.integration.ts"],
+  "references": [
+    { "path": "../../lib/api-zod" }
+  ]
 }
