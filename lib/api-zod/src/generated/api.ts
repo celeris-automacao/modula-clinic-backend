@@ -196,6 +196,26 @@ export const GetPatientProgressResponse = zod.array(GetPatientProgressResponseIt
 
 
 /**
+ * @summary All non-draft treatments for a patient (history view for professionals)
+ */
+export const GetPatientTreatmentsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPatientTreatmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number(),
+  "protocolId": zod.number(),
+  "protocolName": zod.string(),
+  "status": zod.enum(['active', 'completed', 'cancelled']),
+  "startedAt": zod.string(),
+  "durationWeeks": zod.number(),
+  "finalAdherenceScore": zod.number().describe('0-100, computed from task logs over the treatment duration')
+})
+export const GetPatientTreatmentsResponse = zod.array(GetPatientTreatmentsResponseItem)
+
+
+/**
  * @summary Active treatment with its tasks (BR-022: only active treatments)
  */
 export const GetActiveTreatmentParams = zod.object({
@@ -429,26 +449,6 @@ export const CompleteTreatmentResponse = zod.object({
 
 
 /**
- * @summary List all non-draft treatments for a patient (completed + cancelled)
- */
-export const GetPatientTreatmentsParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GetPatientTreatmentsResponseItem = zod.object({
-  "id": zod.number(),
-  "patientId": zod.number(),
-  "protocolId": zod.number(),
-  "protocolName": zod.string(),
-  "status": zod.enum(['active', 'completed', 'cancelled']),
-  "startedAt": zod.string(),
-  "durationWeeks": zod.number(),
-  "finalAdherenceScore": zod.number().describe('0-100, computed from task logs over the treatment duration')
-})
-export const GetPatientTreatmentsResponse = zod.array(GetPatientTreatmentsResponseItem)
-
-
-/**
  * @summary Cancel an active treatment (Active → Cancelled, BR-021)
  */
 export const CancelTreatmentParams = zod.object({
@@ -583,7 +583,7 @@ export const LogoutMobileSessionResponse = zod.object({
 
 
 /**
- * @summary List all high-risk alerts (professional only)
+ * @summary List all high-risk alerts (professionals only)
  */
 export const ListAlertsResponseItem = zod.object({
   "id": zod.number(),
@@ -591,14 +591,14 @@ export const ListAlertsResponseItem = zod.object({
   "patientName": zod.string(),
   "message": zod.string(),
   "riskLevel": zod.string(),
-  "readAt": zod.string().nullish(),
+  "readAt": zod.string().nullable(),
   "createdAt": zod.string()
 })
 export const ListAlertsResponse = zod.array(ListAlertsResponseItem)
 
 
 /**
- * @summary Scan all patients and create high-risk alerts (professional only)
+ * @summary Scan all patients and create high-risk alerts (professionals only)
  */
 export const CheckAlertsResponse = zod.object({
   "ok": zod.boolean(),
@@ -607,7 +607,7 @@ export const CheckAlertsResponse = zod.object({
 
 
 /**
- * @summary Mark an alert as read (professional only)
+ * @summary Mark an alert as read (professionals only)
  */
 export const MarkAlertReadParams = zod.object({
   "id": zod.coerce.number()
@@ -619,7 +619,7 @@ export const MarkAlertReadResponse = zod.object({
   "patientName": zod.string(),
   "message": zod.string(),
   "riskLevel": zod.string(),
-  "readAt": zod.string().nullish(),
+  "readAt": zod.string().nullable(),
   "createdAt": zod.string()
 })
 

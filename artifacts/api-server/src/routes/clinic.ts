@@ -692,6 +692,7 @@ router.post("/treatments/:id/publish", async (req, res): Promise<void> => {
 
 // BR-021: Active → Completed
 router.post("/treatments/:id/complete", async (req, res): Promise<void> => {
+  if (!(await requireProfessional(req, res))) return;
   const params = CompleteTreatmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -719,6 +720,7 @@ router.post("/treatments/:id/complete", async (req, res): Promise<void> => {
 
 // BR-021: Active → Cancelled
 router.post("/treatments/:id/cancel", async (req, res): Promise<void> => {
+  if (!(await requireProfessional(req, res))) return;
   const params = CancelTreatmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

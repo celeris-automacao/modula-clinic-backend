@@ -51,6 +51,8 @@ export * from './todayTaskCategory';
 export * from './todayTaskFrequency';
 export * from './treatmentCreated';
 export * from './treatmentDetail';
+export * from './treatmentHistoryItem';
+export * from './treatmentHistoryItemStatus';
 export * from './treatmentInput';
 export * from './treatmentPublishResult';
 export * from './treatmentStatusResult';
