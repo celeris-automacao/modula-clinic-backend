@@ -15,12 +15,14 @@ export interface HighRiskAlertEmailParams {
   patientId: number;
   patientName: string;
   adherenceScore: number;
+  /** Override the recipient address. Falls back to PROFESSIONAL_EMAIL env var. */
+  to?: string;
 }
 
 export async function sendHighRiskAlertEmail(params: HighRiskAlertEmailParams): Promise<void> {
-  const professionalEmail = process.env.PROFESSIONAL_EMAIL;
+  const professionalEmail = params.to ?? process.env.PROFESSIONAL_EMAIL;
   if (!professionalEmail) {
-    logger.warn("PROFESSIONAL_EMAIL not set — skipping alert e-mail");
+    logger.warn("No notification e-mail configured — skipping alert e-mail");
     return;
   }
 

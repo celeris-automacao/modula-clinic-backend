@@ -34,6 +34,8 @@ export * from './patient';
 export * from './patientInput';
 export * from './patientRiskLevel';
 export * from './patientTrend';
+export * from './professionalProfile';
+export * from './professionalProfileUpdate';
 export * from './progressPoint';
 export * from './protocol';
 export * from './protocolInput';

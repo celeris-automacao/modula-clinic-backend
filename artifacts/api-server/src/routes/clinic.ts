@@ -9,6 +9,7 @@ import {
   taskLogsTable,
   insightsTable,
   alertsTable,
+  usersTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import {
@@ -75,9 +76,23 @@ export async function ensureHighRiskAlert(
     riskLevel: "high",
   });
 
-  // Fire-and-forget: notify the professional by e-mail regardless of which
-  // code path triggered the alert (task-log, inactivity scanner, etc.)
-  void sendHighRiskAlertEmail({ patientId, patientName, adherenceScore: score });
+  // Fire-and-forget: notify professionals by e-mail.
+  // Only users whose ID does NOT appear in patientsTable.userId are professionals.
+  // Use their configured notificationEmail; fall back to the env var if none set.
+  const allUsers = await db
+    .select({ id: usersTable.id, notificationEmail: usersTable.notificationEmail })
+    .from(usersTable)
+    .where(isNotNull(usersTable.notificationEmail));
+  const patientUserIds = new Set(
+    (await db.select({ userId: patientsTable.userId }).from(patientsTable))
+      .map((r) => r.userId)
+      .filter(Boolean),
+  );
+  const configuredEmails = allUsers
+    .filter((u) => !patientUserIds.has(u.id) && u.notificationEmail)
+    .map((u) => u.notificationEmail as string);
+  const to = configuredEmails.length > 0 ? configuredEmails.join(",") : undefined;
+  void sendHighRiskAlertEmail({ patientId, patientName, adherenceScore: score, to });
 
   return true;
 }

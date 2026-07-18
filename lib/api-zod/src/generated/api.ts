@@ -26,15 +26,13 @@ export const ListPatientsResponseItem = zod.object({
   "age": zod.number().nullish(),
   "startWeightKg": zod.number().nullable(),
   "currentWeightKg": zod.number().nullish(),
-  "goalWeightKg": zod.number().nullish(),
   "nextAppointment": zod.string().nullish(),
-  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
   "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
-  "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
   "lastActivityAt": zod.string().nullish()
 })
 export const ListPatientsResponse = zod.array(ListPatientsResponseItem)
@@ -50,7 +48,6 @@ export const CreatePatientBody = zod.object({
   "age": zod.number().optional(),
   "startWeightKg": zod.number().optional(),
   "currentWeightKg": zod.number().optional(),
-  "goalWeightKg": zod.number().optional(),
   "nextAppointment": zod.string().optional()
 })
 
@@ -61,15 +58,13 @@ export const CreatePatientResponse = zod.object({
   "age": zod.number().nullish(),
   "startWeightKg": zod.number().nullable(),
   "currentWeightKg": zod.number().nullish(),
-  "goalWeightKg": zod.number().nullish(),
   "nextAppointment": zod.string().nullish(),
-  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
   "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
-  "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
   "lastActivityAt": zod.string().nullish()
 })
 
@@ -88,15 +83,13 @@ export const GetMyPatientResponse = zod.object({
   "age": zod.number().nullish(),
   "startWeightKg": zod.number().nullable(),
   "currentWeightKg": zod.number().nullish(),
-  "goalWeightKg": zod.number().nullish(),
   "nextAppointment": zod.string().nullish(),
-  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
   "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
-  "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
   "lastActivityAt": zod.string().nullish()
 })
 
@@ -112,15 +105,13 @@ export const GetPatientResponse = zod.object({
   "age": zod.number().nullish(),
   "startWeightKg": zod.number().nullable(),
   "currentWeightKg": zod.number().nullish(),
-  "goalWeightKg": zod.number().nullish(),
   "nextAppointment": zod.string().nullish(),
-  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
   "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
-  "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
   "lastActivityAt": zod.string().nullish()
 })
 
@@ -143,16 +134,14 @@ export const LinkPatientAccountResponse = zod.object({
   "age": zod.number().nullish(),
   "startWeightKg": zod.number().nullable(),
   "currentWeightKg": zod.number().nullish(),
-  "goalWeightKg": zod.number().nullish(),
   "nextAppointment": zod.string().nullish(),
-  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
   "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
-  "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
-  "lastActivityAt": zod.string().nullish()
+  "lastActivityAt": zod.string().nullish(),
+  "insightSummary": zod.string().nullish()
 })
 
 
@@ -196,27 +185,7 @@ export const GetPatientProgressResponse = zod.array(GetPatientProgressResponseIt
 
 
 /**
- * @summary All non-draft treatments for a patient (history view for professionals)
- */
-export const GetPatientTreatmentsParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GetPatientTreatmentsResponseItem = zod.object({
-  "id": zod.number(),
-  "patientId": zod.number(),
-  "protocolId": zod.number(),
-  "protocolName": zod.string(),
-  "status": zod.enum(['active', 'completed', 'cancelled']),
-  "startedAt": zod.string(),
-  "durationWeeks": zod.number(),
-  "finalAdherenceScore": zod.number().describe('0-100, computed from task logs over the treatment duration')
-})
-export const GetPatientTreatmentsResponse = zod.array(GetPatientTreatmentsResponseItem)
-
-
-/**
- * @summary Active treatment with its tasks (BR-022: only active treatments)
+ * @summary Active treatment with its tasks
  */
 export const GetActiveTreatmentParams = zod.object({
   "id": zod.coerce.number()
@@ -227,7 +196,6 @@ export const GetActiveTreatmentResponse = zod.object({
   "patientId": zod.number(),
   "protocolId": zod.number(),
   "protocolName": zod.string(),
-  "status": zod.string(),
   "startedAt": zod.string(),
   "durationWeeks": zod.number(),
   "tasks": zod.array(zod.object({
@@ -277,7 +245,7 @@ export const GetPatientMeasurementsResponse = zod.array(GetPatientMeasurementsRe
 
 
 /**
- * @summary Latest AI insight for the patient (BR-072)
+ * @summary Latest AI insight for the patient
  */
 export const GetLatestInsightParams = zod.object({
   "id": zod.coerce.number()
@@ -295,7 +263,7 @@ export const GetLatestInsightResponse = zod.object({
 
 
 /**
- * @summary Generate a fresh AI insight from the Adherence Engine output (BR-070–BR-073, BR-093)
+ * @summary Generate a fresh AI insight from the Adherence Engine output
  */
 export const GenerateInsightParams = zod.object({
   "id": zod.coerce.number()
@@ -394,7 +362,7 @@ export const GetProtocolResponse = zod.object({
 
 
 /**
- * @summary Apply a protocol to a patient — creates treatment in Draft state (BR-021)
+ * @summary Apply a protocol to a patient (generates the patient's tasks)
  */
 
 
@@ -462,7 +430,7 @@ export const CancelTreatmentResponse = zod.object({
 
 
 /**
- * @summary Patient registers an activity (recomputes adherence) — BR-035 rejects duplicates
+ * @summary Patient registers an activity (recomputes adherence)
  */
 export const CreateTaskLogBody = zod.object({
   "taskId": zod.number(),
@@ -583,7 +551,48 @@ export const LogoutMobileSessionResponse = zod.object({
 
 
 /**
- * @summary List all high-risk alerts (professionals only)
+ * @summary Get the current professional's profile settings
+ */
+export const GetProfessionalProfileHeader = zod.object({
+  "Authorization": zod.string().optional().describe('Opaque session token — `Bearer <sid>`.')
+})
+
+export const GetProfessionalProfileResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string().nullable(),
+  "firstName": zod.string().nullable(),
+  "lastName": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable(),
+  "notificationEmail": zod.string().nullable()
+})
+
+
+/**
+ * @summary Update the current professional's profile settings (e.g. notification e-mail)
+ */
+export const UpdateProfessionalProfileHeader = zod.object({
+  "Authorization": zod.string().optional().describe('Opaque session token — `Bearer <sid>`.')
+})
+
+
+
+
+export const UpdateProfessionalProfileBody = zod.object({
+  "notificationEmail": zod.string().min(1).optional()
+})
+
+export const UpdateProfessionalProfileResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string().nullable(),
+  "firstName": zod.string().nullable(),
+  "lastName": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable(),
+  "notificationEmail": zod.string().nullable()
+})
+
+
+/**
+ * @summary High-risk alert records
  */
 export const ListAlertsResponseItem = zod.object({
   "id": zod.number(),
@@ -598,7 +607,7 @@ export const ListAlertsResponse = zod.array(ListAlertsResponseItem)
 
 
 /**
- * @summary Scan all patients and create high-risk alerts (professionals only)
+ * @summary Recompute adherence and create high-risk alerts for at-risk patients
  */
 export const CheckAlertsResponse = zod.object({
   "ok": zod.boolean(),
@@ -607,20 +616,14 @@ export const CheckAlertsResponse = zod.object({
 
 
 /**
- * @summary Mark an alert as read (professionals only)
+ * @summary Mark an alert as read
  */
 export const MarkAlertReadParams = zod.object({
   "id": zod.coerce.number()
 })
 
 export const MarkAlertReadResponse = zod.object({
-  "id": zod.number(),
-  "patientId": zod.number(),
-  "patientName": zod.string(),
-  "message": zod.string(),
-  "riskLevel": zod.string(),
-  "readAt": zod.string().nullable(),
-  "createdAt": zod.string()
+  "error": zod.string()
 })
 
 

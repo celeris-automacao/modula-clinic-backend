@@ -666,6 +666,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogoutSuccess'
+  /profile:
+    get:
+      operationId: getProfessionalProfile
+      tags: [dashboard]
+      summary: Get the current professional's profile settings
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        "200":
+          description: Profile data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalProfile"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+    patch:
+      operationId: updateProfessionalProfile
+      tags: [dashboard]
+      summary: Update the current professional's profile settings (e.g. notification e-mail)
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfessionalProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessionalProfile"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /alerts:
     get:
       operationId: listAlerts
@@ -1103,6 +1156,20 @@ components:
       properties:
         ok: { type: boolean }
         alertsCreated: { type: integer }
+    ProfessionalProfile:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl, notificationEmail]
+      properties:
+        id: { type: string }
+        email: { type: ["string", "null"] }
+        firstName: { type: ["string", "null"] }
+        lastName: { type: ["string", "null"] }
+        profileImageUrl: { type: ["string", "null"] }
+        notificationEmail: { type: ["string", "null"] }
+    ProfessionalProfileUpdate:
+      type: object
+      properties:
+        notificationEmail: { type: string, minLength: 1 }
     DashboardSummary:
       type: object
       required: [totalPatients, highRisk, mediumRisk, lowRisk, avgAdherence, logsToday]
