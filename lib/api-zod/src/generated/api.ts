@@ -257,6 +257,7 @@ export const GetTodayTasksResponseItem = zod.object({
   "mandatory": zod.boolean().optional(),
   "completedToday": zod.boolean(),
   "note": zod.string().nullish(),
+  "valueNumber": zod.number().nullish().describe('Logged numeric value (sleep hours, mood scale, etc.)'),
   "photoDataUrl": zod.string().nullish().describe('Base64 data URL of the logged photo (photo-category tasks only)')
 })
 export const GetTodayTasksResponse = zod.array(GetTodayTasksResponseItem)
@@ -274,6 +275,24 @@ export const GetPatientMeasurementsResponseItem = zod.object({
   "valueNumber": zod.number().describe('Measurement value e.g. weight in kg')
 })
 export const GetPatientMeasurementsResponse = zod.array(GetPatientMeasurementsResponseItem)
+
+
+/**
+ * @summary Numeric log history for a given category (sleep, mood) for the past 30 days
+ */
+export const GetPatientNumericLogsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPatientNumericLogsQueryParams = zod.object({
+  "category": zod.enum(['sleep', 'mood'])
+})
+
+export const GetPatientNumericLogsResponseItem = zod.object({
+  "date": zod.string().describe('ISO date string YYYY-MM-DD'),
+  "valueNumber": zod.number().describe('Measurement value e.g. weight in kg')
+})
+export const GetPatientNumericLogsResponse = zod.array(GetPatientNumericLogsResponseItem)
 
 
 /**

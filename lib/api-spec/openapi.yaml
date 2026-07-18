@@ -279,6 +279,34 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/MeasurementPoint"
+  /patients/{id}/numeric-logs:
+    get:
+      operationId: getPatientNumericLogs
+      tags: [adherence]
+      summary: Numeric log history for a given category (sleep, mood) for the past 30 days
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: category
+          in: query
+          required: true
+          schema: { type: string, enum: [sleep, mood] }
+      responses:
+        "200":
+          description: Numeric log history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MeasurementPoint"
+        "400":
+          description: Invalid category
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiMessage" }
   /patients/{id}/insight:
     get:
       operationId: getLatestInsight
@@ -1070,6 +1098,9 @@ components:
         mandatory: { type: boolean }
         completedToday: { type: boolean }
         note: { type: ["string", "null"] }
+        valueNumber:
+          type: ["number", "null"]
+          description: "Logged numeric value (sleep hours, mood scale, etc.)"
         photoDataUrl:
           type: ["string", "null"]
           description: "Base64 data URL of the logged photo (photo-category tasks only)"

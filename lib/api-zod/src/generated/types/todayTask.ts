@@ -20,6 +20,11 @@ export interface TodayTask {
   /** @nullable */
   note?: string | null;
   /**
+     * Logged numeric value (sleep hours, mood scale, etc.)
+     * @nullable
+     */
+  valueNumber?: number | null;
+  /**
      * Base64 data URL of the logged photo (photo-category tasks only)
      * @nullable
      */

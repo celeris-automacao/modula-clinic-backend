@@ -20,6 +20,8 @@ export * from './beginBrowserLoginParams';
 export * from './categoryScore';
 export * from './dashboardSummary';
 export * from './errorEnvelope';
+export * from './getPatientNumericLogsCategory';
+export * from './getPatientNumericLogsParams';
 export * from './handleBrowserLoginCallbackParams';
 export * from './healthStatus';
 export * from './insight';

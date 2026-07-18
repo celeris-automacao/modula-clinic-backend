@@ -310,6 +310,39 @@ router.get("/patients/:id/measurements", async (req, res): Promise<void> => {
   res.json(logs.map((l) => ({ date: l.date, valueNumber: l.valueNumber! })));
 });
 
+router.get("/patients/:id/numeric-logs", async (req, res): Promise<void> => {
+  const params = GetPatientParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const { category } = req.query;
+  if (category !== "sleep" && category !== "mood") {
+    res.status(400).json({ error: "category must be sleep or mood" });
+    return;
+  }
+  const since = daysAgoStr(30);
+  const logs = await db
+    .select({
+      date: taskLogsTable.logDate,
+      valueNumber: taskLogsTable.valueNumber,
+    })
+    .from(taskLogsTable)
+    .innerJoin(protocolTasksTable, eq(taskLogsTable.taskId, protocolTasksTable.id))
+    .innerJoin(treatmentsTable, eq(taskLogsTable.treatmentId, treatmentsTable.id))
+    .where(
+      and(
+        eq(taskLogsTable.patientId, params.data.id),
+        eq(treatmentsTable.status, "active"),
+        eq(protocolTasksTable.category, category),
+        gte(taskLogsTable.logDate, since),
+        isNotNull(taskLogsTable.valueNumber),
+      ),
+    )
+    .orderBy(taskLogsTable.logDate);
+  res.json(logs.map((l) => ({ date: l.date, valueNumber: l.valueNumber! })));
+});
+
 // BR-021: all non-draft treatments for a patient (history view for professionals)
 router.get("/patients/:id/treatments", async (req, res): Promise<void> => {
   if (!(await requireProfessional(req, res))) return;
@@ -460,6 +493,7 @@ router.get("/patients/:id/tasks/today", async (req, res): Promise<void> => {
       logDate: taskLogsTable.logDate,
       note: taskLogsTable.note,
       photoData: taskLogsTable.photoData,
+      valueNumber: taskLogsTable.valueNumber,
     })
     .from(taskLogsTable)
     .where(
@@ -471,11 +505,11 @@ router.get("/patients/:id/tasks/today", async (req, res): Promise<void> => {
     );
 
   // Build separate maps: daily tasks check today only, weekly tasks check whole week
-  type LogInfo = { note: string | null; photoData: string | null };
+  type LogInfo = { note: string | null; photoData: string | null; valueNumber: number | null };
   const dailyDone = new Map<number, LogInfo>();
   const weeklyDone = new Map<number, LogInfo>();
   for (const log of logs) {
-    const info = { note: log.note, photoData: log.photoData };
+    const info = { note: log.note, photoData: log.photoData, valueNumber: log.valueNumber };
     if (log.logDate === today) dailyDone.set(log.taskId, info);
     weeklyDone.set(log.taskId, info);
   }
@@ -493,6 +527,7 @@ router.get("/patients/:id/tasks/today", async (req, res): Promise<void> => {
       mandatory: t.mandatory,
       completedToday: done,
       note: info?.note ?? null,
+      valueNumber: info?.valueNumber ?? null,
       photoDataUrl: info?.photoData ?? null,
     };
   });
