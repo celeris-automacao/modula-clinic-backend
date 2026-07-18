@@ -20,8 +20,12 @@ export const protocolTasksTable = pgTable("protocol_tasks", {
   treatmentId: integer("treatment_id"),
   title: text("title").notNull(),
   description: text("description"),
+  // BR-031: Tipos oficiais: weight, water, nutrition, exercise, sleep, mood, medication, photo, free_text
   category: text("category").notNull(),
+  // BR-033: diária ou semanal
   frequency: text("frequency").notNull().default("daily"),
+  // BR-032: flag obrigatória
+  mandatory: boolean("mandatory").notNull().default(false),
 });
 
 export const insertProtocolSchema = createInsertSchema(protocolsTable).omit({ id: true });

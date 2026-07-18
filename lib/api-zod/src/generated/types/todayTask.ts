@@ -15,7 +15,13 @@ export interface TodayTask {
   description?: string | null;
   category: TodayTaskCategory;
   frequency: TodayTaskFrequency;
+  mandatory?: boolean;
   completedToday: boolean;
   /** @nullable */
   note?: string | null;
+  /**
+     * Base64 data URL of the logged photo (photo-category tasks only)
+     * @nullable
+     */
+  photoDataUrl?: string | null;
 }

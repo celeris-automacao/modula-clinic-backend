@@ -20,6 +20,11 @@ export interface Patient {
   currentWeightKg?: number | null;
   /** @nullable */
   nextAppointment?: string | null;
+  /**
+     * Replit user ID linked to this patient, if any
+     * @nullable
+     */
+  userId?: string | null;
   /** 0-100 from Adherence Engine */
   adherenceScore: number;
   riskLevel: PatientRiskLevel;
@@ -27,6 +32,11 @@ export interface Patient {
   hasActiveTreatment: boolean;
   /** @nullable */
   protocolName?: string | null;
+  /**
+     * Latest AI insight summary, if any
+     * @nullable
+     */
+  insightSummary?: string | null;
   /** @nullable */
   lastActivityAt?: string | null;
 }

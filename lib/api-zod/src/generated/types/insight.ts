@@ -12,6 +12,8 @@ export interface Insight {
   patientId: number;
   /** Natural-language explanation of adherence */
   summary: string;
+  /** Key factors observed in the data */
+  observedFactors: string;
   suggestedAction: string;
   riskLevel: InsightRiskLevel;
   createdAt: string;

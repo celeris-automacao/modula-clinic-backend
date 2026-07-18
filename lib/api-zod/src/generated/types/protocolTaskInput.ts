@@ -14,4 +14,5 @@ export interface ProtocolTaskInput {
   description?: string;
   category: ProtocolTaskInputCategory;
   frequency: ProtocolTaskInputFrequency;
+  mandatory?: boolean;
 }

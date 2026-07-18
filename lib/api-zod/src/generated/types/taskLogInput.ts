@@ -12,4 +12,6 @@ export interface TaskLogInput {
   note?: string;
   /** Optional numeric value e.g. weight */
   valueNumber?: number;
+  /** Base64 data URL (data:image/...) — required for photo-category tasks */
+  photoDataUrl?: string;
 }

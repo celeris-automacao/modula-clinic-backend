@@ -1,5 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { transporter } from "./lib/email";
+import { checkAllPatientsForHighRisk } from "./routes/clinic";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +24,23 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Verify SMTP connectivity at startup so misconfiguration surfaces immediately.
+  transporter.verify().then(() => {
+    logger.info("SMTP connection verified successfully");
+  }).catch((err: unknown) => {
+    logger.warn({ err }, "SMTP connection check failed — alert e-mails may not be delivered");
+  });
+
+  // Run an initial silence check shortly after startup, then every hour.
+  const runCheck = () => {
+    checkAllPatientsForHighRisk()
+      .then((n) => {
+        if (n > 0) logger.info({ alertsCreated: n }, "Silence check: new high-risk alerts created");
+      })
+      .catch((err) => logger.error({ err }, "Silence check failed"));
+  };
+
+  setTimeout(runCheck, 5_000); // first run 5 s after boot
+  setInterval(runCheck, 60 * 60 * 1_000); // then every hour
 });

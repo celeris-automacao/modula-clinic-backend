@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
 import { protocolsTable } from "./protocols";
 import { patientsTable } from "./patients";
 
@@ -10,7 +10,8 @@ export const treatmentsTable = pgTable("treatments", {
   protocolId: integer("protocol_id")
     .notNull()
     .references(() => protocolsTable.id),
-  active: boolean("active").notNull().default(true),
+  // BR-021: ciclo Draft → Active → Completed | Cancelled
+  status: text("status").notNull().default("active"),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

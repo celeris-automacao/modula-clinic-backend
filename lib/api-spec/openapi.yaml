@@ -16,6 +16,8 @@ tags:
   - name: adherence
   - name: insights
   - name: dashboard
+  - name: Auth
+    description: Browser and mobile authentication endpoints.
 paths:
   /healthz:
     get:
@@ -59,6 +61,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Patient"
+  /patients/me:
+    get:
+      operationId: getMyPatient
+      tags: [patients]
+      summary: Returns the patient linked to the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Linked patient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessage'
+        '404':
+          description: No patient linked to this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessage'
   /patients/{id}:
     get:
       operationId: getPatient
@@ -75,6 +104,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Patient"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+    patch:
+      operationId: linkPatientAccount
+      tags: [patients]
+      summary: Link a Replit user account to a patient record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchPatientInput"
+      responses:
+        "200":
+          description: Updated patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
         "404":
           description: Not found
           content:
@@ -165,6 +228,25 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TodayTask"
+  /patients/{id}/measurements:
+    get:
+      operationId: getPatientMeasurements
+      tags: [adherence]
+      summary: Measurement (weight) log history for the past 30 days
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Measurement history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MeasurementPoint"
   /patients/{id}/insight:
     get:
       operationId: getLatestInsight
@@ -277,13 +359,109 @@ paths:
               $ref: "#/components/schemas/TreatmentInput"
       responses:
         "201":
-          description: Created treatment with tasks
+          description: Created treatment (Draft, publish to activate)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TreatmentDetail"
+                $ref: "#/components/schemas/TreatmentCreated"
         "400":
           description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /treatments/{id}/publish:
+    post:
+      operationId: publishTreatment
+      tags: [treatments]
+      summary: Publish a treatment — Draft → Active, validates at least one task (BR-003, BR-090)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Treatment activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentStatusResult"
+        "404":
+          description: Treatment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "409":
+          description: Treatment is not in draft status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "422":
+          description: Treatment has no tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /treatments/{id}/complete:
+    post:
+      operationId: completeTreatment
+      tags: [treatments]
+      summary: Mark an active treatment as completed (Active → Completed, BR-021)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Treatment marked as completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentStatusResult"
+        "404":
+          description: Treatment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "409":
+          description: Treatment is not active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+  /treatments/{id}/cancel:
+    post:
+      operationId: cancelTreatment
+      tags: [treatments]
+      summary: Cancel an active treatment (Active → Cancelled, BR-021)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Treatment cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentStatusResult"
+        "404":
+          description: Treatment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "409":
+          description: Treatment is not active
           content:
             application/json:
               schema:
@@ -312,6 +490,175 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the OIDC authorization endpoint.
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: iss
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the returnTo path on success or /api/login on failure.
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+            default: /
+      responses:
+        '302':
+          description: Redirect to the OIDC provider logout URL.
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile OIDC code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileTokenExchangeRequest'
+      responses:
+        '200':
+          description: Session created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileTokenExchangeSuccess'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Token did not contain usable claims.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Token exchange failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      responses:
+        '200':
+          description: Logout processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutSuccess'
+  /alerts:
+    get:
+      operationId: listAlerts
+      tags: [dashboard]
+      summary: High-risk alert records
+      responses:
+        "200":
+          description: Alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+  /alerts/check:
+    post:
+      operationId: checkAlerts
+      tags: [dashboard]
+      summary: Recompute adherence and create high-risk alerts for at-risk patients
+      responses:
+        "200":
+          description: Check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertCheckResult"
+  /alerts/{id}/read:
+    patch:
+      operationId: markAlertRead
+      tags: [dashboard]
+      summary: Mark an alert as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -325,7 +672,82 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      description: Opaque session token — `Bearer <sid>`.
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      description: Browser session cookie.
+      schema:
+        type: string
   schemas:
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: [string, 'null']
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: 'null'
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        code_verifier:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          minLength: 1
+        state:
+          type: string
+          minLength: 1
+        nonce:
+          type: string
+          minLength: 1
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
     HealthStatus:
       type: object
       properties:
@@ -347,11 +769,13 @@ components:
         startWeightKg: { type: ["number", "null"] }
         currentWeightKg: { type: ["number", "null"] }
         nextAppointment: { type: ["string", "null"] }
+        userId: { type: ["string", "null"], description: "Replit user ID linked to this patient, if any" }
         adherenceScore: { type: integer, description: "0-100 from Adherence Engine" }
         riskLevel: { type: string, enum: [high, medium, low, none] }
         trend: { type: string, enum: [improving, stable, declining, unknown] }
         hasActiveTreatment: { type: boolean }
         protocolName: { type: ["string", "null"] }
+        insightSummary: { type: ["string", "null"], description: "Latest AI insight summary, if any" }
         lastActivityAt: { type: ["string", "null"] }
     PatientInput:
       type: object
@@ -363,6 +787,10 @@ components:
         startWeightKg: { type: number }
         currentWeightKg: { type: number }
         nextAppointment: { type: string }
+    PatchPatientInput:
+      type: object
+      properties:
+        userId: { type: ["string", "null"], description: "Replit user ID to link; null to unlink" }
     ProtocolTask:
       type: object
       required: [id, title, category, frequency]
@@ -370,16 +798,20 @@ components:
         id: { type: integer }
         title: { type: string }
         description: { type: ["string", "null"] }
-        category: { type: string, enum: [nutrition, exercise, hydration, measurement, habit, medication] }
+        # BR-031: 9 official category slugs
+        category: { type: string, enum: [weight, water, nutrition, exercise, sleep, mood, medication, photo, free_text] }
         frequency: { type: string, enum: [daily, weekly] }
+        mandatory: { type: boolean }
     ProtocolTaskInput:
       type: object
       required: [title, category, frequency]
       properties:
         title: { type: string, minLength: 1 }
         description: { type: string }
-        category: { type: string, enum: [nutrition, exercise, hydration, measurement, habit, medication] }
+        # BR-031: 9 official category slugs
+        category: { type: string, enum: [weight, water, nutrition, exercise, sleep, mood, medication, photo, free_text] }
         frequency: { type: string, enum: [daily, weekly] }
+        mandatory: { type: boolean }
     Protocol:
       type: object
       required: [id, name, description, durationWeeks, isPreset, tasks]
@@ -416,6 +848,23 @@ components:
           description: Tarefas personalizadas adicionadas além do protocolo
           items:
             $ref: "#/components/schemas/ProtocolTaskInput"
+    TreatmentCreated:
+      type: object
+      required: [id, patientId, protocolId, status, protocolName, startedAt, durationWeeks]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        protocolId: { type: integer }
+        status: { type: string }
+        protocolName: { type: string }
+        startedAt: { type: string }
+        durationWeeks: { type: integer }
+    TreatmentStatusResult:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: integer }
+        status: { type: string }
     TreatmentDetail:
       type: object
       required: [id, patientId, protocolId, protocolName, startedAt, durationWeeks, tasks]
@@ -437,10 +886,15 @@ components:
         taskId: { type: integer }
         title: { type: string }
         description: { type: ["string", "null"] }
-        category: { type: string, enum: [nutrition, exercise, hydration, measurement, habit, medication] }
+        # BR-031: 9 official category slugs
+        category: { type: string, enum: [weight, water, nutrition, exercise, sleep, mood, medication, photo, free_text] }
         frequency: { type: string, enum: [daily, weekly] }
+        mandatory: { type: boolean }
         completedToday: { type: boolean }
         note: { type: ["string", "null"] }
+        photoDataUrl:
+          type: ["string", "null"]
+          description: "Base64 data URL of the logged photo (photo-category tasks only)"
     TaskLogInput:
       type: object
       required: [taskId, patientId]
@@ -449,6 +903,9 @@ components:
         patientId: { type: integer }
         note: { type: string }
         valueNumber: { type: number, description: "Optional numeric value e.g. weight" }
+        photoDataUrl:
+          type: string
+          description: "Base64 data URL (data:image/...) — required for photo-category tasks"
     TaskLogResult:
       type: object
       required: [logId, adherence]
@@ -478,6 +935,12 @@ components:
       properties:
         category: { type: string }
         completionPct: { type: integer }
+    MeasurementPoint:
+      type: object
+      required: [date, valueNumber]
+      properties:
+        date: { type: string, description: "ISO date string YYYY-MM-DD" }
+        valueNumber: { type: number, description: "Measurement value e.g. weight in kg" }
     ProgressPoint:
       type: object
       required: [date, completed, expected, completionPct]
@@ -488,14 +951,38 @@ components:
         completionPct: { type: integer }
     Insight:
       type: object
-      required: [id, patientId, summary, suggestedAction, riskLevel, createdAt]
+      required: [id, patientId, summary, observedFactors, suggestedAction, riskLevel, createdAt]
       properties:
         id: { type: integer }
         patientId: { type: integer }
         summary: { type: string, description: "Natural-language explanation of adherence" }
+        observedFactors: { type: string, description: "Key factors observed in the data" }
         suggestedAction: { type: string }
         riskLevel: { type: string, enum: [high, medium, low, none] }
         createdAt: { type: string }
+    PublishTreatmentResult:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: integer }
+        status: { type: string }
+    Alert:
+      type: object
+      required: [id, patientId, patientName, message, riskLevel, readAt, createdAt]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        patientName: { type: string }
+        message: { type: string }
+        riskLevel: { type: string }
+        readAt: { type: ["string", "null"] }
+        createdAt: { type: string }
+    AlertCheckResult:
+      type: object
+      required: [ok, alertsCreated]
+      properties:
+        ok: { type: boolean }
+        alertsCreated: { type: integer }
     DashboardSummary:
       type: object
       required: [totalPatients, highRisk, mediumRisk, lowRisk, avgAdherence, logsToday]

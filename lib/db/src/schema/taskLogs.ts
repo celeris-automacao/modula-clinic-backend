@@ -16,6 +16,7 @@ export const taskLogsTable = pgTable("task_logs", {
     .references(() => protocolTasksTable.id),
   logDate: date("log_date", { mode: "string" }).notNull(),
   note: text("note"),
+  photoData: text("photo_data"),
   valueNumber: real("value_number"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

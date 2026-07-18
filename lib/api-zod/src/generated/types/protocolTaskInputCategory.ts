@@ -10,10 +10,13 @@ export type ProtocolTaskInputCategory = typeof ProtocolTaskInputCategory[keyof t
 
 
 export const ProtocolTaskInputCategory = {
+  weight: 'weight',
+  water: 'water',
   nutrition: 'nutrition',
   exercise: 'exercise',
-  hydration: 'hydration',
-  measurement: 'measurement',
-  habit: 'habit',
+  sleep: 'sleep',
+  mood: 'mood',
   medication: 'medication',
+  photo: 'photo',
+  free_text: 'free_text',
 } as const;

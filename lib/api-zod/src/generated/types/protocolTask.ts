@@ -15,4 +15,5 @@ export interface ProtocolTask {
   description?: string | null;
   category: ProtocolTaskCategory;
   frequency: ProtocolTaskFrequency;
+  mandatory?: boolean;
 }

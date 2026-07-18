@@ -12,6 +12,7 @@ function serializeInsight(row: typeof insightsTable.$inferSelect) {
     id: row.id,
     patientId: row.patientId,
     summary: row.summary,
+    observedFactors: row.observedFactors,
     suggestedAction: row.suggestedAction,
     riskLevel: row.riskLevel,
     createdAt: row.createdAt.toISOString(),
@@ -19,6 +20,10 @@ function serializeInsight(row: typeof insightsTable.$inferSelect) {
 }
 
 router.get("/patients/:id/insight", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Autenticação necessária" });
+    return;
+  }
   const params = GetLatestInsightParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -38,6 +43,10 @@ router.get("/patients/:id/insight", async (req, res): Promise<void> => {
 });
 
 router.post("/patients/:id/insight/generate", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Autenticação necessária" });
+    return;
+  }
   const params = GenerateInsightParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -57,8 +66,14 @@ router.post("/patients/:id/insight/generate", async (req, res): Promise<void> =>
     return;
   }
 
-  // The Adherence Engine computes the numbers; the AI only interprets them (ADR-003).
+  // BR-004: O Adherence Engine é a única fonte do Score — a IA apenas interpreta
   const adherence = await computeAdherence(patient.id);
+
+  // BR-093: Não gerar Insight sem Score
+  if (adherence.score === 0 && adherence.riskLevel === "none") {
+    res.status(422).json({ error: "Não é possível gerar insight sem score calculado (BR-093)" });
+    return;
+  }
 
   const context = {
     paciente: {
@@ -80,6 +95,8 @@ router.post("/patients/:id/insight/generate", async (req, res): Promise<void> =>
     },
   };
 
+  // BR-072: todo insight deve conter resumo, fatores observados e sugestão de acompanhamento
+  // BR-071/BR-073: a IA interpreta — nunca calcula scores nem altera Radar
   const completion = await openai.chat.completions.create({
     model: "gpt-5.6-terra",
     max_completion_tokens: 8192,
@@ -87,7 +104,13 @@ router.post("/patients/:id/insight/generate", async (req, res): Promise<void> =>
       {
         role: "system",
         content:
-          "Você é um assistente clínico do Modula Clinic, plataforma de acompanhamento de adesão ao tratamento em clínicas de emagrecimento. Você recebe indicadores objetivos calculados pelo Adherence Engine (você NÃO calcula scores, apenas interpreta). Responda SOMENTE com JSON válido no formato {\"summary\": string, \"suggestedAction\": string}. Escreva TODO o texto exclusivamente em português do Brasil, sem nenhuma palavra em outro idioma ou alfabeto. 'summary': 2-3 frases em português explicando o comportamento de adesão do paciente em linguagem natural, clara e objetiva, citando os dados relevantes. 'suggestedAction': 1-2 frases com uma sugestão de ação concreta e prática para o profissional de saúde agir antes da próxima consulta. Tom profissional e direto. A decisão final é sempre do profissional.",
+          "Você é um assistente clínico do Modula Clinic. Você recebe indicadores objetivos calculados pelo Adherence Engine (você NÃO calcula scores, apenas interpreta os dados). " +
+          "Responda SOMENTE com JSON válido no formato {\"summary\": string, \"observedFactors\": string, \"suggestedAction\": string}. " +
+          "Escreva TODO o texto exclusivamente em português do Brasil. " +
+          "'summary': 2-3 frases explicando o comportamento de adesão do paciente de forma clara e objetiva, citando os dados relevantes. " +
+          "'observedFactors': 1-2 frases destacando os principais fatores observados nos dados (tarefas com baixa conclusão, padrão de falhas, sequência interrompida, etc.). " +
+          "'suggestedAction': 1-2 frases com uma sugestão de ação concreta para o profissional de saúde antes da próxima consulta. " +
+          "Tom profissional e direto. A decisão final é sempre do profissional. Nunca diagnostique, prescreva ou altere indicadores.",
       },
       {
         role: "user",
@@ -98,16 +121,23 @@ router.post("/patients/:id/insight/generate", async (req, res): Promise<void> =>
   });
 
   const raw = completion.choices[0]?.message?.content ?? "{}";
-  let parsedAi: { summary?: string; suggestedAction?: string };
+  let parsedAi: { summary?: string; observedFactors?: string; suggestedAction?: string };
   try {
     parsedAi = JSON.parse(raw);
   } catch {
     parsedAi = {};
   }
+
   const summary =
     typeof parsedAi.summary === "string" && parsedAi.summary.trim().length > 0
       ? parsedAi.summary.trim()
       : `Adesão atual de ${adherence.score}% (risco ${adherence.riskLevel}), tendência ${adherence.trend}.`;
+
+  const observedFactors =
+    typeof parsedAi.observedFactors === "string" && parsedAi.observedFactors.trim().length > 0
+      ? parsedAi.observedFactors.trim()
+      : `Score de ${adherence.score}% com ${adherence.missedLast3Days} tarefas perdidas nos últimos 3 dias.`;
+
   const suggestedAction =
     typeof parsedAi.suggestedAction === "string" && parsedAi.suggestedAction.trim().length > 0
       ? parsedAi.suggestedAction.trim()
@@ -118,6 +148,7 @@ router.post("/patients/:id/insight/generate", async (req, res): Promise<void> =>
     .values({
       patientId: patient.id,
       summary,
+      observedFactors,
       suggestedAction,
       riskLevel: adherence.riskLevel,
     })

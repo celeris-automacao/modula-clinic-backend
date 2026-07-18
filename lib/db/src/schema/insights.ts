@@ -6,7 +6,9 @@ export const insightsTable = pgTable("insights", {
   patientId: integer("patient_id")
     .notNull()
     .references(() => patientsTable.id),
+  // BR-072: resumo, fatores observados e sugestão de acompanhamento
   summary: text("summary").notNull(),
+  observedFactors: text("observed_factors").notNull().default(""),
   suggestedAction: text("suggested_action").notNull(),
   riskLevel: text("risk_level").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

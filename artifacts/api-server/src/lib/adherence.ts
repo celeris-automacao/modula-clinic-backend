@@ -41,18 +41,20 @@ function daysAgo(n: number): Date {
 }
 
 export async function getActiveTreatmentWithTasks(patientId: number) {
+  // BR-022: somente tratamentos ativos aparecem para o paciente
   const [treatment] = await db
     .select({
       id: treatmentsTable.id,
       patientId: treatmentsTable.patientId,
       protocolId: treatmentsTable.protocolId,
       startedAt: treatmentsTable.startedAt,
+      status: treatmentsTable.status,
       protocolName: protocolsTable.name,
       durationWeeks: protocolsTable.durationWeeks,
     })
     .from(treatmentsTable)
     .innerJoin(protocolsTable, eq(treatmentsTable.protocolId, protocolsTable.id))
-    .where(and(eq(treatmentsTable.patientId, patientId), eq(treatmentsTable.active, true)))
+    .where(and(eq(treatmentsTable.patientId, patientId), eq(treatmentsTable.status, "active")))
     .limit(1);
 
   if (!treatment) return null;
@@ -78,7 +80,7 @@ export async function getActiveTreatmentWithTasks(patientId: number) {
  * Adherence Engine (deterministic, rule-based — ADR-003).
  * Window: last 7 days, clipped to treatment start.
  * score = 70% completion of last 3 days + 30% completion of the 4 days before.
- * trend compares those two windows. Risk: <50 high, <75 medium, else low.
+ * BR-061 risk bands: ≥70 low (Boa adesão), 40–69 medium (Atenção), <40 high (Alto risco).
  */
 export async function computeAdherence(patientId: number): Promise<AdherenceResult> {
   const computedAt = new Date().toISOString();
@@ -170,7 +172,8 @@ export async function computeAdherence(patientId: number): Promise<AdherenceResu
   }
   score = Math.max(0, Math.min(100, score));
 
-  const riskLevel: RiskLevel = score < 50 ? "high" : score < 75 ? "medium" : "low";
+  // BR-061: faixas oficiais — 70–100 Boa adesão, 40–69 Atenção, 0–39 Alto risco
+  const riskLevel: RiskLevel = score < 40 ? "high" : score < 70 ? "medium" : "low";
 
   let trend: Trend = "stable";
   if (older.length === 0) trend = "unknown";

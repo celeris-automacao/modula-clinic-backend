@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, date, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -10,6 +10,8 @@ export const patientsTable = pgTable("patients", {
   startWeightKg: real("start_weight_kg"),
   currentWeightKg: real("current_weight_kg"),
   nextAppointment: date("next_appointment", { mode: "string" }),
+  // Links this patient record to a Replit Auth user (nullable — not all patients have accounts yet)
+  userId: varchar("user_id").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

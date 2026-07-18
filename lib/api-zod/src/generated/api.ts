@@ -27,11 +27,13 @@ export const ListPatientsResponseItem = zod.object({
   "startWeightKg": zod.number().nullable(),
   "currentWeightKg": zod.number().nullish(),
   "nextAppointment": zod.string().nullish(),
+  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
   "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
   "lastActivityAt": zod.string().nullish()
 })
 export const ListPatientsResponse = zod.array(ListPatientsResponseItem)
@@ -58,11 +60,39 @@ export const CreatePatientResponse = zod.object({
   "startWeightKg": zod.number().nullable(),
   "currentWeightKg": zod.number().nullish(),
   "nextAppointment": zod.string().nullish(),
+  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
   "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
+  "lastActivityAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Returns the patient linked to the currently authenticated user
+ */
+export const GetMyPatientHeader = zod.object({
+  "Authorization": zod.string().optional().describe('Opaque session token — `Bearer <sid>`.')
+})
+
+export const GetMyPatientResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "age": zod.number().nullish(),
+  "startWeightKg": zod.number().nullable(),
+  "currentWeightKg": zod.number().nullish(),
+  "nextAppointment": zod.string().nullish(),
+  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
+  "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
+  "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
+  "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
+  "hasActiveTreatment": zod.boolean(),
+  "protocolName": zod.string().nullish(),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
   "lastActivityAt": zod.string().nullish()
 })
 
@@ -79,11 +109,43 @@ export const GetPatientResponse = zod.object({
   "startWeightKg": zod.number().nullable(),
   "currentWeightKg": zod.number().nullish(),
   "nextAppointment": zod.string().nullish(),
+  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
   "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
+  "lastActivityAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Link a Replit user account to a patient record
+ */
+export const LinkPatientAccountParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const LinkPatientAccountBody = zod.object({
+  "userId": zod.string().nullish().describe('Replit user ID to link; null to unlink')
+})
+
+export const LinkPatientAccountResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "age": zod.number().nullish(),
+  "startWeightKg": zod.number().nullable(),
+  "currentWeightKg": zod.number().nullish(),
+  "nextAppointment": zod.string().nullish(),
+  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
+  "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
+  "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
+  "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
+  "hasActiveTreatment": zod.boolean(),
+  "protocolName": zod.string().nullish(),
+  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
   "lastActivityAt": zod.string().nullish()
 })
 
@@ -145,8 +207,9 @@ export const GetActiveTreatmentResponse = zod.object({
   "id": zod.number(),
   "title": zod.string(),
   "description": zod.string().nullish(),
-  "category": zod.enum(['nutrition', 'exercise', 'hydration', 'measurement', 'habit', 'medication']),
-  "frequency": zod.enum(['daily', 'weekly'])
+  "category": zod.enum(['weight', 'water', 'nutrition', 'exercise', 'sleep', 'mood', 'medication', 'photo', 'free_text']),
+  "frequency": zod.enum(['daily', 'weekly']),
+  "mandatory": zod.boolean().optional()
 }))
 })
 
@@ -162,12 +225,28 @@ export const GetTodayTasksResponseItem = zod.object({
   "taskId": zod.number(),
   "title": zod.string(),
   "description": zod.string().nullish(),
-  "category": zod.enum(['nutrition', 'exercise', 'hydration', 'measurement', 'habit', 'medication']),
+  "category": zod.enum(['weight', 'water', 'nutrition', 'exercise', 'sleep', 'mood', 'medication', 'photo', 'free_text']),
   "frequency": zod.enum(['daily', 'weekly']),
+  "mandatory": zod.boolean().optional(),
   "completedToday": zod.boolean(),
-  "note": zod.string().nullish()
+  "note": zod.string().nullish(),
+  "photoDataUrl": zod.string().nullish().describe('Base64 data URL of the logged photo (photo-category tasks only)')
 })
 export const GetTodayTasksResponse = zod.array(GetTodayTasksResponseItem)
+
+
+/**
+ * @summary Measurement (weight) log history for the past 30 days
+ */
+export const GetPatientMeasurementsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPatientMeasurementsResponseItem = zod.object({
+  "date": zod.string().describe('ISO date string YYYY-MM-DD'),
+  "valueNumber": zod.number().describe('Measurement value e.g. weight in kg')
+})
+export const GetPatientMeasurementsResponse = zod.array(GetPatientMeasurementsResponseItem)
 
 
 /**
@@ -181,6 +260,7 @@ export const GetLatestInsightResponse = zod.object({
   "id": zod.number(),
   "patientId": zod.number(),
   "summary": zod.string().describe('Natural-language explanation of adherence'),
+  "observedFactors": zod.string().describe('Key factors observed in the data'),
   "suggestedAction": zod.string(),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "createdAt": zod.string()
@@ -198,6 +278,7 @@ export const GenerateInsightResponse = zod.object({
   "id": zod.number(),
   "patientId": zod.number(),
   "summary": zod.string().describe('Natural-language explanation of adherence'),
+  "observedFactors": zod.string().describe('Key factors observed in the data'),
   "suggestedAction": zod.string(),
   "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
   "createdAt": zod.string()
@@ -217,8 +298,9 @@ export const ListProtocolsResponseItem = zod.object({
   "id": zod.number(),
   "title": zod.string(),
   "description": zod.string().nullish(),
-  "category": zod.enum(['nutrition', 'exercise', 'hydration', 'measurement', 'habit', 'medication']),
-  "frequency": zod.enum(['daily', 'weekly'])
+  "category": zod.enum(['weight', 'water', 'nutrition', 'exercise', 'sleep', 'mood', 'medication', 'photo', 'free_text']),
+  "frequency": zod.enum(['daily', 'weekly']),
+  "mandatory": zod.boolean().optional()
 }))
 })
 export const ListProtocolsResponse = zod.array(ListProtocolsResponseItem)
@@ -240,8 +322,9 @@ export const CreateProtocolBody = zod.object({
   "tasks": zod.array(zod.object({
   "title": zod.string().min(1),
   "description": zod.string().optional(),
-  "category": zod.enum(['nutrition', 'exercise', 'hydration', 'measurement', 'habit', 'medication']),
-  "frequency": zod.enum(['daily', 'weekly'])
+  "category": zod.enum(['weight', 'water', 'nutrition', 'exercise', 'sleep', 'mood', 'medication', 'photo', 'free_text']),
+  "frequency": zod.enum(['daily', 'weekly']),
+  "mandatory": zod.boolean().optional()
 })).min(1)
 })
 
@@ -255,8 +338,9 @@ export const CreateProtocolResponse = zod.object({
   "id": zod.number(),
   "title": zod.string(),
   "description": zod.string().nullish(),
-  "category": zod.enum(['nutrition', 'exercise', 'hydration', 'measurement', 'habit', 'medication']),
-  "frequency": zod.enum(['daily', 'weekly'])
+  "category": zod.enum(['weight', 'water', 'nutrition', 'exercise', 'sleep', 'mood', 'medication', 'photo', 'free_text']),
+  "frequency": zod.enum(['daily', 'weekly']),
+  "mandatory": zod.boolean().optional()
 }))
 })
 
@@ -275,8 +359,9 @@ export const GetProtocolResponse = zod.object({
   "id": zod.number(),
   "title": zod.string(),
   "description": zod.string().nullish(),
-  "category": zod.enum(['nutrition', 'exercise', 'hydration', 'measurement', 'habit', 'medication']),
-  "frequency": zod.enum(['daily', 'weekly'])
+  "category": zod.enum(['weight', 'water', 'nutrition', 'exercise', 'sleep', 'mood', 'medication', 'photo', 'free_text']),
+  "frequency": zod.enum(['daily', 'weekly']),
+  "mandatory": zod.boolean().optional()
 }))
 })
 
@@ -293,8 +378,9 @@ export const CreateTreatmentBody = zod.object({
   "extraTasks": zod.array(zod.object({
   "title": zod.string().min(1),
   "description": zod.string().optional(),
-  "category": zod.enum(['nutrition', 'exercise', 'hydration', 'measurement', 'habit', 'medication']),
-  "frequency": zod.enum(['daily', 'weekly'])
+  "category": zod.enum(['weight', 'water', 'nutrition', 'exercise', 'sleep', 'mood', 'medication', 'photo', 'free_text']),
+  "frequency": zod.enum(['daily', 'weekly']),
+  "mandatory": zod.boolean().optional()
 })).optional().describe('Tarefas personalizadas adicionadas além do protocolo')
 })
 
@@ -302,16 +388,49 @@ export const CreateTreatmentResponse = zod.object({
   "id": zod.number(),
   "patientId": zod.number(),
   "protocolId": zod.number(),
+  "status": zod.string(),
   "protocolName": zod.string(),
   "startedAt": zod.string(),
-  "durationWeeks": zod.number(),
-  "tasks": zod.array(zod.object({
+  "durationWeeks": zod.number()
+})
+
+
+/**
+ * @summary Publish a treatment — Draft → Active, validates at least one task (BR-003, BR-090)
+ */
+export const PublishTreatmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PublishTreatmentResponse = zod.object({
   "id": zod.number(),
-  "title": zod.string(),
-  "description": zod.string().nullish(),
-  "category": zod.enum(['nutrition', 'exercise', 'hydration', 'measurement', 'habit', 'medication']),
-  "frequency": zod.enum(['daily', 'weekly'])
-}))
+  "status": zod.string()
+})
+
+
+/**
+ * @summary Mark an active treatment as completed (Active → Completed, BR-021)
+ */
+export const CompleteTreatmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CompleteTreatmentResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.string()
+})
+
+
+/**
+ * @summary Cancel an active treatment (Active → Cancelled, BR-021)
+ */
+export const CancelTreatmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CancelTreatmentResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.string()
 })
 
 
@@ -322,7 +441,8 @@ export const CreateTaskLogBody = zod.object({
   "taskId": zod.number(),
   "patientId": zod.number(),
   "note": zod.string().optional(),
-  "valueNumber": zod.number().optional().describe('Optional numeric value e.g. weight')
+  "valueNumber": zod.number().optional().describe('Optional numeric value e.g. weight'),
+  "photoDataUrl": zod.string().optional().describe('Base64 data URL (data:image\/...) — required for photo-category tasks')
 })
 
 export const CreateTaskLogResponse = zod.object({
@@ -341,6 +461,133 @@ export const CreateTaskLogResponse = zod.object({
 })),
   "computedAt": zod.string()
 })
+})
+
+
+/**
+ * @summary Get the currently authenticated user
+ */
+export const GetCurrentAuthUserHeader = zod.object({
+  "Authorization": zod.string().optional().describe('Opaque session token — `Bearer <sid>`.')
+})
+
+export const GetCurrentAuthUserResponse = zod.object({
+  "user": zod.union([zod.object({
+  "id": zod.string(),
+  "email": zod.string().nullable(),
+  "firstName": zod.string().nullable(),
+  "lastName": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Start the browser OIDC login flow
+ */
+export const BeginBrowserLoginQueryParams = zod.object({
+  "returnTo": zod.coerce.string().optional()
+})
+
+export const BeginBrowserLoginResponse = zod.void()
+
+
+/**
+ * @summary Complete the browser OIDC login flow
+ */
+export const HandleBrowserLoginCallbackQueryParams = zod.object({
+  "code": zod.coerce.string().optional(),
+  "state": zod.coerce.string().optional(),
+  "iss": zod.coerce.string().optional()
+})
+
+export const HandleBrowserLoginCallbackResponse = zod.void()
+
+
+/**
+ * @summary Clear the session and begin OIDC logout
+ */
+export const logoutBrowserSessionQueryReturnToDefault = `/`;
+
+export const LogoutBrowserSessionQueryParams = zod.object({
+  "returnTo": zod.coerce.string().default(logoutBrowserSessionQueryReturnToDefault)
+})
+
+export const LogoutBrowserSessionHeader = zod.object({
+  "Authorization": zod.string().optional().describe('Opaque session token — `Bearer <sid>`.')
+})
+
+export const LogoutBrowserSessionResponse = zod.void()
+
+
+/**
+ * @summary Exchange a mobile OIDC code for a session token
+ */
+
+
+
+
+
+
+
+export const ExchangeMobileAuthorizationCodeBody = zod.object({
+  "code": zod.string().min(1),
+  "code_verifier": zod.string().min(1),
+  "redirect_uri": zod.string().min(1),
+  "state": zod.string().min(1),
+  "nonce": zod.string().min(1).optional()
+})
+
+export const ExchangeMobileAuthorizationCodeResponse = zod.object({
+  "token": zod.string()
+})
+
+
+/**
+ * @summary Delete a mobile session token
+ */
+export const LogoutMobileSessionHeader = zod.object({
+  "Authorization": zod.string().optional().describe('Opaque session token — `Bearer <sid>`.')
+})
+
+export const LogoutMobileSessionResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary High-risk alert records
+ */
+export const ListAlertsResponseItem = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number(),
+  "patientName": zod.string(),
+  "message": zod.string(),
+  "riskLevel": zod.string(),
+  "readAt": zod.string().nullable(),
+  "createdAt": zod.string()
+})
+export const ListAlertsResponse = zod.array(ListAlertsResponseItem)
+
+
+/**
+ * @summary Recompute adherence and create high-risk alerts for at-risk patients
+ */
+export const CheckAlertsResponse = zod.object({
+  "ok": zod.boolean(),
+  "alertsCreated": zod.number()
+})
+
+
+/**
+ * @summary Mark an alert as read
+ */
+export const MarkAlertReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkAlertReadResponse = zod.object({
+  "error": zod.string()
 })
 
 
