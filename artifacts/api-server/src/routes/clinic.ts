@@ -447,6 +447,11 @@ router.get("/patients/:id/treatment", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Nenhum tratamento ativo" });
     return;
   }
+  // BR-050: tell the client whether at least one task log exists for this treatment
+  const [{ count: logCount }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(taskLogsTable)
+    .where(eq(taskLogsTable.treatmentId, active.treatment.id));
   res.json({
     id: active.treatment.id,
     patientId: active.treatment.patientId,
@@ -455,6 +460,7 @@ router.get("/patients/:id/treatment", async (req, res): Promise<void> => {
     status: active.treatment.status,
     startedAt: active.treatment.startedAt.toISOString(),
     durationWeeks: active.treatment.durationWeeks,
+    hasActivity: logCount > 0,
     tasks: active.tasks,
   });
 });
@@ -764,6 +770,17 @@ router.post("/treatments/:id/complete", async (req, res): Promise<void> => {
     res.status(409).json({ error: "Somente tratamentos ativos podem ser encerrados" });
     return;
   }
+  // BR-050: impede encerramento sem nenhuma atividade registrada
+  const [{ count: logCount }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(taskLogsTable)
+    .where(eq(taskLogsTable.treatmentId, treatment.id));
+  if (logCount === 0) {
+    res.status(409).json({
+      error: "Não é possível encerrar um tratamento sem atividades registradas (BR-050)",
+    });
+    return;
+  }
   const [updated] = await db
     .update(treatmentsTable)
     .set({ status: "completed" })
@@ -790,6 +807,17 @@ router.post("/treatments/:id/cancel", async (req, res): Promise<void> => {
   }
   if (treatment.status !== "active") {
     res.status(409).json({ error: "Somente tratamentos ativos podem ser cancelados" });
+    return;
+  }
+  // BR-050: impede cancelamento sem nenhuma atividade registrada
+  const [{ count: logCount }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(taskLogsTable)
+    .where(eq(taskLogsTable.treatmentId, treatment.id));
+  if (logCount === 0) {
+    res.status(409).json({
+      error: "Não é possível cancelar um tratamento sem atividades registradas (BR-050)",
+    });
     return;
   }
   const [updated] = await db

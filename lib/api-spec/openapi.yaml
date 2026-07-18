@@ -803,12 +803,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
-        "401":
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiMessage"
   /alerts:
     get:
       operationId: listAlerts
@@ -877,11 +871,11 @@ paths:
           schema: { type: integer }
       responses:
         "200":
-          description: Updated alert
+          description: Alert marked as read
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Alert"
+                $ref: "#/components/schemas/ApiMessage"
         "400":
           description: Invalid params
           content:
@@ -1133,7 +1127,7 @@ components:
         status: { type: string }
     TreatmentDetail:
       type: object
-      required: [id, patientId, protocolId, protocolName, status, startedAt, durationWeeks, tasks]
+      required: [id, patientId, protocolId, protocolName, status, startedAt, durationWeeks, tasks, hasActivity]
       properties:
         id: { type: integer }
         patientId: { type: integer }
@@ -1143,6 +1137,9 @@ components:
         status: { type: string }
         startedAt: { type: string }
         durationWeeks: { type: integer }
+        hasActivity:
+          type: boolean
+          description: "True when at least one task log exists for this treatment (BR-050)"
         tasks:
           type: array
           items:

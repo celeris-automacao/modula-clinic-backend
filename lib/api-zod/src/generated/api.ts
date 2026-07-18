@@ -235,6 +235,7 @@ export const GetActiveTreatmentResponse = zod.object({
   "status": zod.string(),
   "startedAt": zod.string(),
   "durationWeeks": zod.number(),
+  "hasActivity": zod.boolean().describe('True when at least one task log exists for this treatment (BR-050)'),
   "tasks": zod.array(zod.object({
   "id": zod.number(),
   "title": zod.string(),
@@ -706,13 +707,7 @@ export const MarkAlertReadParams = zod.object({
 })
 
 export const MarkAlertReadResponse = zod.object({
-  "id": zod.number(),
-  "patientId": zod.number(),
-  "patientName": zod.string(),
-  "message": zod.string(),
-  "riskLevel": zod.string(),
-  "readAt": zod.string().nullable(),
-  "createdAt": zod.string()
+  "error": zod.string()
 })
 
 
