@@ -125,6 +125,7 @@ async function patientSummary(patient: typeof patientsTable.$inferSelect) {
     age: patient.age,
     startWeightKg: patient.startWeightKg,
     currentWeightKg: patient.currentWeightKg,
+    goalWeightKg: patient.goalWeightKg,
     nextAppointment: patient.nextAppointment,
     userId: patient.userId ?? null,
     adherenceScore: adherence.score,
@@ -207,6 +208,7 @@ router.get("/patients/:id", async (req, res): Promise<void> => {
 });
 
 router.patch("/patients/:id", async (req, res): Promise<void> => {
+  if (!(await requireProfessional(req, res))) return;
   const params = LinkPatientAccountParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -840,7 +842,15 @@ router.patch("/alerts/:id/read", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Alerta não encontrado" });
     return;
   }
-  res.json({ ok: true });
+  res.json({
+    id: updated.id,
+    patientId: updated.patientId,
+    patientName: updated.patientName,
+    message: updated.message,
+    riskLevel: updated.riskLevel,
+    readAt: updated.readAt ? updated.readAt.toISOString() : null,
+    createdAt: updated.createdAt.toISOString(),
+  });
 });
 
 router.get("/dashboard/summary", async (req, res): Promise<void> => {

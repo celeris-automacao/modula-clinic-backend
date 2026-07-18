@@ -19,6 +19,8 @@ export interface Patient {
   /** @nullable */
   currentWeightKg?: number | null;
   /** @nullable */
+  goalWeightKg?: number | null;
+  /** @nullable */
   nextAppointment?: string | null;
   /**
      * Replit user ID linked to this patient, if any
@@ -33,7 +35,7 @@ export interface Patient {
   /** @nullable */
   protocolName?: string | null;
   /**
-     * Latest AI insight summary, if any
+     * BR-081: insight resumido para o card do dashboard
      * @nullable
      */
   insightSummary?: string | null;

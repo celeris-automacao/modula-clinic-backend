@@ -14,5 +14,6 @@ export interface PatientInput {
   age?: number;
   startWeightKg?: number;
   currentWeightKg?: number;
+  goalWeightKg?: number;
   nextAppointment?: string;
 }

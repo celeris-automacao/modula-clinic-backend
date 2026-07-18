@@ -9,6 +9,7 @@ export const patientsTable = pgTable("patients", {
   age: integer("age"),
   startWeightKg: real("start_weight_kg"),
   currentWeightKg: real("current_weight_kg"),
+  goalWeightKg: real("goal_weight_kg"),
   nextAppointment: date("next_appointment", { mode: "string" }),
   // Links this patient record to a Replit Auth user (nullable — not all patients have accounts yet)
   userId: varchar("user_id").unique(),

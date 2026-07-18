@@ -12,6 +12,7 @@ export interface TreatmentDetail {
   patientId: number;
   protocolId: number;
   protocolName: string;
+  status: string;
   startedAt: string;
   durationWeeks: number;
   tasks: ProtocolTask[];

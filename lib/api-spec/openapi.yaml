@@ -18,6 +18,7 @@ tags:
   - name: dashboard
   - name: Auth
     description: Browser and mobile authentication endpoints.
+  - name: alerts
 paths:
   /healthz:
     get:
@@ -190,7 +191,7 @@ paths:
     get:
       operationId: getActiveTreatment
       tags: [treatments]
-      summary: Active treatment with its tasks
+      summary: "Active treatment with its tasks (BR-022: only active treatments)"
       parameters:
         - name: id
           in: path
@@ -251,7 +252,7 @@ paths:
     get:
       operationId: getLatestInsight
       tags: [insights]
-      summary: Latest AI insight for the patient
+      summary: Latest AI insight for the patient (BR-072)
       parameters:
         - name: id
           in: path
@@ -274,7 +275,7 @@ paths:
     post:
       operationId: generateInsight
       tags: [insights]
-      summary: Generate a fresh AI insight from the Adherence Engine output
+      summary: Generate a fresh AI insight from the Adherence Engine output (BR-070–BR-073, BR-093)
       parameters:
         - name: id
           in: path
@@ -350,7 +351,7 @@ paths:
     post:
       operationId: createTreatment
       tags: [treatments]
-      summary: Apply a protocol to a patient (generates the patient's tasks)
+      summary: Apply a protocol to a patient — creates treatment in Draft state (BR-021)
       requestBody:
         required: true
         content:
@@ -383,11 +384,17 @@ paths:
             type: integer
       responses:
         "200":
-          description: Treatment activated
+          description: Published treatment
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TreatmentStatusResult"
+                $ref: "#/components/schemas/TreatmentPublishResult"
+        "400":
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
         "404":
           description: Treatment not found
           content:
@@ -395,13 +402,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
         "409":
-          description: Treatment is not in draft status
+          description: Treatment is not in draft state
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
         "422":
-          description: Treatment has no tasks
+          description: "Treatment has no tasks (BR-003)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "409":
+          description: Treatment is not in draft state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "422":
+          description: "Treatment has no tasks (BR-003)"
           content:
             application/json:
               schema:
@@ -470,7 +489,7 @@ paths:
     post:
       operationId: createTaskLog
       tags: [tasks]
-      summary: Patient registers an activity (recomputes adherence)
+      summary: Patient registers an activity (recomputes adherence) — BR-035 rejects duplicates
       requestBody:
         required: true
         content:
@@ -485,7 +504,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/TaskLogResult"
         "400":
-          description: Invalid input
+          description: Invalid input or no active treatment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "403":
+          description: Patient ownership violation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "409":
+          description: "Duplicate log within the same period (BR-035)"
           content:
             application/json:
               schema:
@@ -610,55 +647,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogoutSuccess'
-  /alerts:
-    get:
-      operationId: listAlerts
-      tags: [dashboard]
-      summary: High-risk alert records
-      responses:
-        "200":
-          description: Alerts
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Alert"
-  /alerts/check:
-    post:
-      operationId: checkAlerts
-      tags: [dashboard]
-      summary: Recompute adherence and create high-risk alerts for at-risk patients
-      responses:
-        "200":
-          description: Check result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AlertCheckResult"
-  /alerts/{id}/read:
-    patch:
-      operationId: markAlertRead
-      tags: [dashboard]
-      summary: Mark an alert as read
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiMessage"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiMessage"
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -768,6 +756,7 @@ components:
         age: { type: ["integer", "null"] }
         startWeightKg: { type: ["number", "null"] }
         currentWeightKg: { type: ["number", "null"] }
+        goalWeightKg: { type: ["number", "null"] }
         nextAppointment: { type: ["string", "null"] }
         userId: { type: ["string", "null"], description: "Replit user ID linked to this patient, if any" }
         adherenceScore: { type: integer, description: "0-100 from Adherence Engine" }
@@ -775,7 +764,7 @@ components:
         trend: { type: string, enum: [improving, stable, declining, unknown] }
         hasActiveTreatment: { type: boolean }
         protocolName: { type: ["string", "null"] }
-        insightSummary: { type: ["string", "null"], description: "Latest AI insight summary, if any" }
+        insightSummary: { type: ["string", "null"], description: "BR-081: insight resumido para o card do dashboard" }
         lastActivityAt: { type: ["string", "null"] }
     PatientInput:
       type: object
@@ -786,6 +775,7 @@ components:
         age: { type: integer }
         startWeightKg: { type: number }
         currentWeightKg: { type: number }
+        goalWeightKg: { type: number }
         nextAppointment: { type: string }
     PatchPatientInput:
       type: object
@@ -801,6 +791,7 @@ components:
         # BR-031: 9 official category slugs
         category: { type: string, enum: [weight, water, nutrition, exercise, sleep, mood, medication, photo, free_text] }
         frequency: { type: string, enum: [daily, weekly] }
+        # BR-032: flag obrigatória
         mandatory: { type: boolean }
     ProtocolTaskInput:
       type: object
@@ -811,6 +802,7 @@ components:
         # BR-031: 9 official category slugs
         category: { type: string, enum: [weight, water, nutrition, exercise, sleep, mood, medication, photo, free_text] }
         frequency: { type: string, enum: [daily, weekly] }
+        # BR-032: flag obrigatória
         mandatory: { type: boolean }
     Protocol:
       type: object
@@ -867,18 +859,26 @@ components:
         status: { type: string }
     TreatmentDetail:
       type: object
-      required: [id, patientId, protocolId, protocolName, startedAt, durationWeeks, tasks]
+      required: [id, patientId, protocolId, protocolName, status, startedAt, durationWeeks, tasks]
       properties:
         id: { type: integer }
         patientId: { type: integer }
         protocolId: { type: integer }
         protocolName: { type: string }
+        # BR-021: draft | active | completed | cancelled
+        status: { type: string }
         startedAt: { type: string }
         durationWeeks: { type: integer }
         tasks:
           type: array
           items:
             $ref: "#/components/schemas/ProtocolTask"
+    TreatmentPublishResult:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: integer }
+        status: { type: string }
     TodayTask:
       type: object
       required: [taskId, title, category, frequency, completedToday]
@@ -889,6 +889,7 @@ components:
         # BR-031: 9 official category slugs
         category: { type: string, enum: [weight, water, nutrition, exercise, sleep, mood, medication, photo, free_text] }
         frequency: { type: string, enum: [daily, weekly] }
+        # BR-032: flag obrigatória
         mandatory: { type: boolean }
         completedToday: { type: boolean }
         note: { type: ["string", "null"] }
@@ -956,6 +957,7 @@ components:
         id: { type: integer }
         patientId: { type: integer }
         summary: { type: string, description: "Natural-language explanation of adherence" }
+        # BR-072: fatores observados
         observedFactors: { type: string, description: "Key factors observed in the data" }
         suggestedAction: { type: string }
         riskLevel: { type: string, enum: [high, medium, low, none] }
@@ -993,3 +995,14 @@ components:
         lowRisk: { type: integer }
         avgAdherence: { type: integer }
         logsToday: { type: integer }
+    AlertItem:
+      type: object
+      required: [id, patientId, patientName, message, riskLevel, createdAt]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        patientName: { type: string }
+        message: { type: string }
+        riskLevel: { type: string }
+        readAt: { type: ["string", "null"] }
+        createdAt: { type: string }
