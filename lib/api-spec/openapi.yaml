@@ -670,7 +670,7 @@ paths:
     get:
       operationId: listAlerts
       tags: [alerts]
-      summary: List all high-risk alerts (professional only)
+      summary: List all high-risk alerts (professionals only)
       responses:
         "200":
           description: Alerts, newest first
@@ -679,32 +679,48 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/AlertItem"
+                  $ref: "#/components/schemas/Alert"
         "401":
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
         "403":
           description: Not a professional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /alerts/check:
     post:
       operationId: checkAlerts
       tags: [alerts]
-      summary: Scan all patients and create high-risk alerts (professional only)
+      summary: Scan all patients and create high-risk alerts (professionals only)
       responses:
         "200":
-          description: Scan result
+          description: Alert check result
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AlertCheckResult"
         "401":
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
         "403":
           description: Not a professional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /alerts/{id}/read:
     patch:
       operationId: markAlertRead
       tags: [alerts]
-      summary: Mark an alert as read (professional only)
+      summary: Mark an alert as read (professionals only)
       parameters:
         - name: id
           in: path
@@ -716,13 +732,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AlertItem"
+                $ref: "#/components/schemas/Alert"
         "401":
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
         "403":
           description: Not a professional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
         "404":
           description: Alert not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
