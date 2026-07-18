@@ -145,6 +145,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
+  /patients/{id}/goal-weight:
+    patch:
+      operationId: updatePatientGoalWeight
+      tags: [patients]
+      summary: Set or clear the goal weight for a patient (professionals only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGoalWeightInput"
+      responses:
+        "200":
+          description: Updated patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "403":
+          description: Not a professional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "404":
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /patients/{id}/adherence:
     get:
       operationId: getPatientAdherence
@@ -1032,6 +1079,11 @@ components:
         currentWeightKg: { type: number }
         goalWeightKg: { type: number }
         nextAppointment: { type: string }
+    UpdateGoalWeightInput:
+      type: object
+      required: [goalWeightKg]
+      properties:
+        goalWeightKg: { type: ["number", "null"], description: "Target weight in kg; null to clear" }
     PatchPatientInput:
       type: object
       properties:

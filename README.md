@@ -34,9 +34,9 @@ A API sobe em `http://localhost:$PORT` com rotas sob `/api`
 
 - `artifacts/api-server` — servidor Express (rotas em `src/routes`, engine em `src/lib/adherence.ts`)
 - `lib/api-spec` — contrato OpenAPI (fonte da verdade) + codegen
-- `lib/api-zod` — schemas Zod gerados (validação de request/response)
-- `lib/db` — schema Drizzle e cliente Postgres
-- `lib/integrations-openai-ai-server` — cliente OpenAI (usado pelos insights)
+- `lib/api-zod` — schemas Zod gerados a partir do OpenAPI (validação de request/response)
+- `lib/db` — schema Drizzle ORM e cliente Postgres
+- `lib/integrations-openai-ai-server` — cliente OpenAI server-side (usado pelos insights de IA)
 
 ## Variáveis de ambiente
 

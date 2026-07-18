@@ -1,6 +1,7 @@
 {
   "name": "@workspace/integrations-openai-ai-server",
   "version": "0.0.0",
+  "description": "cliente OpenAI server-side (usado pelos insights de IA)",
   "private": true,
   "type": "module",
   "exports": {

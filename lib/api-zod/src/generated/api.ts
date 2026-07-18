@@ -167,6 +167,39 @@ export const LinkPatientAccountResponse = zod.object({
 
 
 /**
+ * @summary Set or clear the goal weight for a patient (professionals only)
+ */
+export const UpdatePatientGoalWeightParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePatientGoalWeightBody = zod.object({
+  "goalWeightKg": zod.number().nullable().describe('Target weight in kg; null to clear')
+})
+
+export const UpdatePatientGoalWeightResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "age": zod.number().nullish(),
+  "startWeightKg": zod.number().nullable(),
+  "currentWeightKg": zod.number().nullish(),
+  "goalWeightKg": zod.number().nullish(),
+  "nextAppointment": zod.string().nullish(),
+  "userId": zod.string().nullish().describe('Replit user ID linked to this patient, if any'),
+  "adherenceScore": zod.number().describe('0-100 from Adherence Engine'),
+  "riskLevel": zod.enum(['high', 'medium', 'low', 'none']),
+  "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
+  "hasActiveTreatment": zod.boolean(),
+  "hasPushToken": zod.boolean().describe('Whether the patient has a registered push notification token'),
+  "protocolName": zod.string().nullish(),
+  "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
+  "lastActivityAt": zod.string().nullish(),
+  "lastReminderAt": zod.string().nullish().describe('ISO timestamp of the last push reminder sent to this patient, if any')
+})
+
+
+/**
  * @summary Adherence radar detail computed by the Adherence Engine
  */
 export const GetPatientAdherenceParams = zod.object({

@@ -1096,6 +1096,43 @@ router.post("/task-logs", async (req, res): Promise<void> => {
 });
 
 // ---------------------------------------------------------------------------
+// Goal Weight
+// ---------------------------------------------------------------------------
+
+/**
+ * PATCH /patients/:id/goal-weight
+ * Allows professionals to set or clear the target weight for a patient.
+ * The goal weight line appears in the patient's progress chart on the mobile app.
+ */
+router.patch("/patients/:id/goal-weight", async (req, res): Promise<void> => {
+  if (!(await requireProfessional(req, res))) return;
+  const idNum = parseInt(req.params.id);
+  if (isNaN(idNum)) {
+    res.status(400).json({ error: "ID inválido" });
+    return;
+  }
+  const { goalWeightKg } = req.body as { goalWeightKg?: number | null };
+  if (goalWeightKg !== null && goalWeightKg !== undefined && typeof goalWeightKg !== "number") {
+    res.status(400).json({ error: "goalWeightKg deve ser um número ou null" });
+    return;
+  }
+  const [patient] = await db
+    .select()
+    .from(patientsTable)
+    .where(eq(patientsTable.id, idNum));
+  if (!patient) {
+    res.status(404).json({ error: "Paciente não encontrado" });
+    return;
+  }
+  const [updated] = await db
+    .update(patientsTable)
+    .set({ goalWeightKg: goalWeightKg ?? null })
+    .where(eq(patientsTable.id, idNum))
+    .returning();
+  res.json(await patientSummary(updated!));
+});
+
+// ---------------------------------------------------------------------------
 // Alerts
 // ---------------------------------------------------------------------------
 
