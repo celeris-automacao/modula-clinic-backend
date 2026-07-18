@@ -120,7 +120,7 @@ export const GetPatientResponse = zod.object({
   "trend": zod.enum(['improving', 'stable', 'declining', 'unknown']),
   "hasActiveTreatment": zod.boolean(),
   "protocolName": zod.string().nullish(),
-  "insightSummary": zod.string().nullish().describe('Latest AI insight summary, if any'),
+  "insightSummary": zod.string().nullish().describe('BR-081: insight resumido para o card do dashboard'),
   "lastActivityAt": zod.string().nullish()
 })
 
@@ -559,6 +559,48 @@ export const LogoutMobileSessionHeader = zod.object({
 
 export const LogoutMobileSessionResponse = zod.object({
   "success": zod.boolean()
+})
+
+
+/**
+ * @summary List all high-risk alerts (professional only)
+ */
+export const ListAlertsResponseItem = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number(),
+  "patientName": zod.string(),
+  "message": zod.string(),
+  "riskLevel": zod.string(),
+  "readAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListAlertsResponse = zod.array(ListAlertsResponseItem)
+
+
+/**
+ * @summary Scan all patients and create high-risk alerts (professional only)
+ */
+export const CheckAlertsResponse = zod.object({
+  "ok": zod.boolean(),
+  "alertsCreated": zod.number()
+})
+
+
+/**
+ * @summary Mark an alert as read (professional only)
+ */
+export const MarkAlertReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkAlertReadResponse = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number(),
+  "patientName": zod.string(),
+  "message": zod.string(),
+  "riskLevel": zod.string(),
+  "readAt": zod.string().nullish(),
+  "createdAt": zod.string()
 })
 
 

@@ -413,18 +413,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
-        "409":
-          description: Treatment is not in draft state
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiMessage"
-        "422":
-          description: "Treatment has no tasks (BR-003)"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiMessage"
   /treatments/{id}/complete:
     post:
       operationId: completeTreatment
@@ -647,6 +635,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogoutSuccess'
+  /alerts:
+    get:
+      operationId: listAlerts
+      tags: [alerts]
+      summary: List all high-risk alerts (professional only)
+      responses:
+        "200":
+          description: Alerts, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertItem"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not a professional
+  /alerts/check:
+    post:
+      operationId: checkAlerts
+      tags: [alerts]
+      summary: Scan all patients and create high-risk alerts (professional only)
+      responses:
+        "200":
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertCheckResult"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not a professional
+  /alerts/{id}/read:
+    patch:
+      operationId: markAlertRead
+      tags: [alerts]
+      summary: Mark an alert as read (professional only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Updated alert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertItem"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not a professional
+        "404":
+          description: Alert not found
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
