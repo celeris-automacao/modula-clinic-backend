@@ -28,6 +28,7 @@ import {
   CancelTreatmentParams,
   LinkPatientAccountParams,
   LinkPatientAccountBody,
+  GetPatientTreatmentsParams,
 } from "@workspace/api-zod";
 import {
   computeAdherence,
@@ -292,6 +293,95 @@ router.get("/patients/:id/measurements", async (req, res): Promise<void> => {
     )
     .orderBy(taskLogsTable.logDate);
   res.json(logs.map((l) => ({ date: l.date, valueNumber: l.valueNumber! })));
+});
+
+// BR-021: all non-draft treatments for a patient (history view for professionals)
+router.get("/patients/:id/treatments", async (req, res): Promise<void> => {
+  if (!(await requireProfessional(req, res))) return;
+  const params = GetPatientTreatmentsParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [patient] = await db
+    .select({ id: patientsTable.id })
+    .from(patientsTable)
+    .where(eq(patientsTable.id, params.data.id));
+  if (!patient) {
+    res.status(404).json({ error: "Paciente não encontrado" });
+    return;
+  }
+
+  const treatments = await db
+    .select({
+      id: treatmentsTable.id,
+      patientId: treatmentsTable.patientId,
+      protocolId: treatmentsTable.protocolId,
+      status: treatmentsTable.status,
+      startedAt: treatmentsTable.startedAt,
+      protocolName: protocolsTable.name,
+      durationWeeks: protocolsTable.durationWeeks,
+    })
+    .from(treatmentsTable)
+    .innerJoin(protocolsTable, eq(treatmentsTable.protocolId, protocolsTable.id))
+    .where(
+      and(
+        eq(treatmentsTable.patientId, params.data.id),
+        or(
+          eq(treatmentsTable.status, "completed"),
+          eq(treatmentsTable.status, "cancelled"),
+          eq(treatmentsTable.status, "active"),
+        ),
+      ),
+    )
+    .orderBy(desc(treatmentsTable.startedAt));
+
+  // Compute a simple final adherence score for each treatment from task logs
+  const items = await Promise.all(
+    treatments.map(async (t) => {
+      const tasks = await db
+        .select({ id: protocolTasksTable.id, frequency: protocolTasksTable.frequency })
+        .from(protocolTasksTable)
+        .where(
+          and(
+            eq(protocolTasksTable.protocolId, t.protocolId),
+            or(
+              isNull(protocolTasksTable.treatmentId),
+              eq(protocolTasksTable.treatmentId, t.id),
+            ),
+          ),
+        );
+
+      const dailyCount = tasks.filter((tk) => tk.frequency === "daily").length;
+      const weeklyCount = tasks.filter((tk) => tk.frequency === "weekly").length;
+      const expectedLogs = dailyCount * t.durationWeeks * 7 + weeklyCount * t.durationWeeks;
+
+      let finalAdherenceScore = 0;
+      if (expectedLogs > 0) {
+        const [logCount] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(taskLogsTable)
+          .where(eq(taskLogsTable.treatmentId, t.id));
+        finalAdherenceScore = Math.min(
+          100,
+          Math.round(((logCount?.count ?? 0) / expectedLogs) * 100),
+        );
+      }
+
+      return {
+        id: t.id,
+        patientId: t.patientId,
+        protocolId: t.protocolId,
+        protocolName: t.protocolName,
+        status: t.status,
+        startedAt: t.startedAt.toISOString(),
+        durationWeeks: t.durationWeeks,
+        finalAdherenceScore,
+      };
+    }),
+  );
+
+  res.json(items);
 });
 
 router.get("/patients/:id/treatment", async (req, res): Promise<void> => {

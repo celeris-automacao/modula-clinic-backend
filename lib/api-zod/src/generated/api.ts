@@ -429,6 +429,26 @@ export const CompleteTreatmentResponse = zod.object({
 
 
 /**
+ * @summary List all non-draft treatments for a patient (completed + cancelled)
+ */
+export const GetPatientTreatmentsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPatientTreatmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number(),
+  "protocolId": zod.number(),
+  "protocolName": zod.string(),
+  "status": zod.enum(['active', 'completed', 'cancelled']),
+  "startedAt": zod.string(),
+  "durationWeeks": zod.number(),
+  "finalAdherenceScore": zod.number().describe('0-100, computed from task logs over the treatment duration')
+})
+export const GetPatientTreatmentsResponse = zod.array(GetPatientTreatmentsResponseItem)
+
+
+/**
  * @summary Cancel an active treatment (Active → Cancelled, BR-021)
  */
 export const CancelTreatmentParams = zod.object({

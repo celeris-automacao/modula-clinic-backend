@@ -187,6 +187,37 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ProgressPoint"
+  /patients/{id}/treatments:
+    get:
+      operationId: getPatientTreatments
+      tags: [treatments]
+      summary: All non-draft treatments for a patient (history view for professionals)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Treatment history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TreatmentHistoryItem"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+        "404":
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
   /patients/{id}/treatment:
     get:
       operationId: getActiveTreatment
@@ -885,6 +916,20 @@ components:
           description: Tarefas personalizadas adicionadas além do protocolo
           items:
             $ref: "#/components/schemas/ProtocolTaskInput"
+    TreatmentHistoryItem:
+      type: object
+      required: [id, patientId, protocolId, protocolName, status, startedAt, durationWeeks, finalAdherenceScore]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        protocolId: { type: integer }
+        protocolName: { type: string }
+        status: { type: string, enum: [active, completed, cancelled] }
+        startedAt: { type: string }
+        durationWeeks: { type: integer }
+        finalAdherenceScore:
+          type: integer
+          description: "0-100, computed from task logs over the treatment duration"
     TreatmentCreated:
       type: object
       required: [id, patientId, protocolId, status, protocolName, startedAt, durationWeeks]
